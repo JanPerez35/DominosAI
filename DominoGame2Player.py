@@ -27,6 +27,24 @@ class DominoGame:
         self.current_player = 0
         # Checks who passed
         self.passes = 0
+        #find highest double in players' hands
+        highest_double = None
+        self.ai_should_start = False  # Flag to trigger AI move at start
+
+        for n in range(6, -1, -1):
+            if (n, n) in self.players[0]:
+                highest_double = (n, n)
+                self.players[0].remove((n, n))
+                self.board.append(((n, n), 0))
+                self.current_player = 1  # AI goes next
+                self.ai_should_start = True
+                break
+            elif (n, n) in self.players[1]:
+                highest_double = (n, n)
+                self.players[1].remove((n, n))
+                self.board.append(((n, n), 1))
+                self.current_player = 0  # Human goes next
+                break
 
     '''
     Verifies if the move is valid, meaning if the tile you want to use matches with a corner
@@ -151,6 +169,8 @@ class DominoGUI:
 
         self.draw_board()
         self.draw_hand()
+        if self.game.ai_should_start:
+            self.root.after(500, self.ai_turn)
 
     '''
     Toggles the music playback between playing and pausing.
