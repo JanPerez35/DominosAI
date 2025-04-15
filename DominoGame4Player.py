@@ -177,34 +177,36 @@ class DominoGUI:
             self.root.after(500, self.ai_turn)
 
     def ai_turn(self):
-        while self.game.current_player != 0 and not self.game.is_game_over():
-            cp = self.game.current_player
-            hand = self.game.players[cp]
-            valid_moves = self.game.get_valid_moves(hand)
-
-            while not valid_moves and self.game.stock:
-                drawn = self.game.draw_from_stock(cp)
-                valid_moves = self.game.get_valid_moves(self.game.players[cp])
-
-            move = self.monte_carlo_ai_move(cp, simulations=25)
-            if move:
-                self.game.play_tile(cp, move)
-                self.status_label.config(text=f"AI {cp} played {move}")
+        if self.game.current_player == 0 or self.game.is_game_over():
+            if self.game.is_game_over():
+                self.end_game()
             else:
-                self.game.pass_turn()
-                self.status_label.config(text=f"AI {cp} passed")
+                self.status_label.config(text="Your turn!")
+                self.draw_hand()
+            return
 
-            self.draw_board()
-            self.update_ai_tile_counts()
-            self.game.current_player = (self.game.current_player + 1) % 4
+        cp = self.game.current_player
+        hand = self.game.players[cp]
+        valid_moves = self.game.get_valid_moves(hand)
 
-        if self.game.current_player == 0 and not self.game.is_game_over():
-            self.status_label.config(text="Your turn!")
-            self.draw_hand()
+        while not valid_moves and self.game.stock:
+            drawn = self.game.draw_from_stock(cp) # Se borra pq no se usa???
+            valid_moves = self.game.get_valid_moves(self.game.players[cp])
 
-        if self.game.is_game_over():
-            self.end_game()
+        move = self.monte_carlo_ai_move(cp, simulations=25)
+        if move:
+            self.game.play_tile(cp, move)
+            self.status_label.config(text=f"AI {cp} played {move}")
+        else:
+            self.game.pass_turn()
+            self.status_label.config(text=f"AI {cp} passed")
 
+        self.draw_board()
+        self.update_ai_tile_counts()
+        self.game.current_player = (self.game.current_player + 1) % 4
+            
+        self.root.after(1000, self.ai_turn) # delay between AI turns
+        
     def monte_carlo_ai_move(self, player_index, simulations=25):
         hand = self.game.players[player_index]
         valid_moves = self.game.get_valid_moves(hand)
