@@ -23,6 +23,14 @@ class DominoGame:
         self.board_owners = deque()  # To track who placed each tile
         self.current_player = 0
         self.passes = 0
+        for i, hand in enumerate(self.players):
+            if (6, 6) in hand:
+                self.current_player = (i + 1) % 4
+                hand.remove((6, 6))  # Remove from hand
+                self.board.append((6, 6))  # Place it on the board
+                self.board_owners.append(i)  # Track who played it
+                break
+
 
     def is_valid_move(self, tile, end):
         return end in tile
@@ -64,11 +72,23 @@ class DominoGame:
         return any(len(p) == 0 for p in self.players) or self.passes >= 4
 
     def get_winner(self):
-        scores = [(i, sum(sum(t) for t in p)) for i, p in enumerate(self.players)]
-        scores.sort(key=lambda x: x[1])
-        if len(scores) > 1 and scores[0][1] == scores[1][1]:
-            return -1  # Tie
-        return scores[0][0]
+        # Calculate total pip count for each player
+        player_scores = []
+        for i, hand in enumerate(self.players):
+            total = sum(tile[0] + tile[1] for tile in hand)
+            player_scores.append((i, total))
+
+        # Sort players by score (lowest total wins)
+        player_scores.sort(key=lambda x: x[1])
+
+        # Check for a tie (two or more players with the same lowest score)
+        lowest_score = player_scores[0][1]
+        tied_players = [i for i, score in player_scores if score == lowest_score]
+
+        if len(tied_players) > 1:
+             return -1  # Tie
+        else:
+             return player_scores[0][0]  # Index of the winning player
 
 # ------------ GUI ------------
 
@@ -84,6 +104,27 @@ class DominoGUI:
         self.board_frame = tk.Frame(root)
         self.board_frame.pack(pady=10)
 
+        self.canvas_width = 1000
+        self.canvas_height = 300
+
+        self.canvas_scrollbar = tk.Scrollbar(self.board_frame, orient=tk.HORIZONTAL)
+        self.canvas_scrollbar.pack(fill=tk.X)
+
+        self.board_canvas = tk.Canvas(self.board_frame, width=self.canvas_width, height=self.canvas_height,
+                                      bg='light gray',xscrollcommand=self.canvas_scrollbar.set,
+    scrollregion=(0, 0, 5000, 300)
+                                      )
+        self.board_canvas.pack(side=tk.TOP, fill=tk.X)
+        self.canvas_scrollbar.config(command=self.board_canvas.xview)
+        self.scroll_button_frame = tk.Frame(self.board_frame)
+        self.scroll_button_frame.pack(pady=5)
+
+        self.scroll_left_btn = tk.Button(self.scroll_button_frame, text=" Scroll Left", command=self.scroll_left)
+        self.scroll_left_btn.pack(side=tk.LEFT, padx=5)
+
+        self.scroll_right_btn = tk.Button(self.scroll_button_frame, text="Scroll Right ", command=self.scroll_right)
+        self.scroll_right_btn.pack(side=tk.LEFT, padx=5)
+
         self.hand_frame = tk.Frame(root)
         self.hand_frame.pack(pady=10)
 
@@ -92,6 +133,24 @@ class DominoGUI:
 
         self.controls_frame = tk.Frame(root)
         self.controls_frame.pack(pady=10)
+
+        #Leyend
+        self.legend_frame = tk.Frame(root)
+        self.legend_frame.pack(pady=5)
+
+        self.legend_label = tk.Label(self.legend_frame, text="Legend:")
+        self.legend_label.pack(side=tk.LEFT)
+
+        legend_info = [
+            ("You", 'blue'),
+            ("AI 1", 'red'),
+            ("AI 2", 'green'),
+            ("AI 3", 'purple'),
+        ]
+
+        for name, color in legend_info:
+            label = tk.Label(self.legend_frame, text=f"{name}", fg=color, font=("Arial", 10, 'bold'))
+            label.pack(side=tk.LEFT, padx=5)
 
         # Buttons
         self.pass_button = tk.Button(self.controls_frame, text="Pass Turn", command=self.pass_turn)
@@ -114,6 +173,23 @@ class DominoGUI:
 
         self.draw_board()
         self.draw_hand()
+        if self.game.current_player != 0:
+            self.status_label.config(
+                text=f"AI {self.game.current_player} starts with (6|6)"
+            )
+            self.root.after(1000, self.ai_turn)
+        else:
+            self.status_label.config(text="You start with (6|6)!")
+
+
+    def scroll_left(self):
+        current_x = self.board_canvas.canvasx(0)
+        self.board_canvas.xview_scroll(-1, "units")  # Scroll left by one unit
+
+    def scroll_right(self):
+        current_x = self.board_canvas.canvasx(0)
+        self.board_canvas.xview_scroll(1, "units")  # Scroll right by one unit
+
 
     def toggle_music(self):
         if self.music_on:
@@ -125,13 +201,35 @@ class DominoGUI:
         self.music_on = not self.music_on
 
     def draw_board(self):
-        for widget in self.board_frame.winfo_children():
-            widget.destroy()
+        self.board_canvas.delete("all")
+        x, y = 500, 150  # Start position
+        tile_positions = []
+
         for i, tile in enumerate(self.game.board):
             owner = self.game.board_owners[i]
-            tile_str = f"[{tile[0]}|{tile[1]}]"
             color = self.player_colors[owner]
-            tk.Label(self.board_frame, text=tile_str, font=('Courier', 14), relief='ridge', padx=6, pady=4, fg=color).pack(side=tk.LEFT)
+            is_double = tile[0] == tile[1]
+
+            if is_double:
+                # Vertical tile
+                self.board_canvas.create_rectangle(x, y, x + 30, y + 60, fill='white', outline=color, width=2)
+                self.board_canvas.create_text(x + 15, y + 30, text=f"{tile[0]}\n|\n{tile[1]}", fill=color,
+                                              font=('Courier', 10, 'bold'))
+                tile_positions.append((x, 60))
+                x += 40
+            else:
+                # Horizontal tile
+                self.board_canvas.create_rectangle(x, y, x + 60, y + 30, fill='white', outline=color, width=2)
+                self.board_canvas.create_text(x + 30, y + 15, text=f"{tile[0]}|{tile[1]}", fill=color,
+                                              font=('Courier', 12, 'bold'))
+                tile_positions.append((x, 60))
+                x += 70
+
+            self.board_canvas.config(scrollregion=(0,0, max(x+100,1000), 300))
+            if tile_positions:
+                latest_x = tile_positions[-1][0]
+                canvas_view_x = max(latest_x - self.canvas_width // 2, 0)
+                self.board_canvas.xview_moveto(canvas_view_x / (max(x + 100, 1000)))
 
     def draw_hand(self):
         for widget in self.hand_frame.winfo_children():
@@ -204,9 +302,9 @@ class DominoGUI:
         self.draw_board()
         self.update_ai_tile_counts()
         self.game.current_player = (self.game.current_player + 1) % 4
-            
+
         self.root.after(1000, self.ai_turn) # delay between AI turns
-        
+
     def monte_carlo_ai_move(self, player_index, simulations=25):
         hand = self.game.players[player_index]
         valid_moves = self.game.get_valid_moves(hand)
@@ -249,12 +347,29 @@ class DominoGUI:
 
     def end_game(self):
         winner = self.game.get_winner()
+
+        # Optional: Print all players' remaining points
+        player_scores = [
+            (i, sum(t[0] + t[1] for t in hand), hand)
+            for i, hand in enumerate(self.game.players)
+        ]
+        score_lines = "\n".join(
+            f"Player {i} ({'You' if i == 0 else 'AI'}): {score} points | Tiles: {hand}"
+            for i, score, hand in player_scores
+        )
+        print("Final scores (lower is better):")
+        for i, score, hand in player_scores:
+            print(f"Player {i}: {score} points")
+
         if winner == 0:
             msg = "🎉 You win!"
         elif winner == -1:
             msg = "🤝 It's a tie!"
         else:
             msg = f"🤖 AI {winner} wins!"
+
+        msg += "\nFinal Scores:\n" + score_lines
+
         messagebox.showinfo("Game Over", msg)
         self.root.quit()
 
