@@ -46,6 +46,14 @@ class DominoGame:
                 self.current_player = 0  # Human goes next
                 break
 
+        for i, hand in enumerate(self.players):
+            if (6, 6) in hand:
+                self.current_player = (i + 1) % 4
+                hand.remove((6, 6))  # Remove from hand
+                self.board.append((6, 6))  # Place it on the board
+                self.board_owners.append(i)  # Track who played it
+                break
+
     '''
     Verifies if the move is valid, meaning if the tile you want to use matches with a corner
     '''
@@ -114,17 +122,23 @@ class DominoGame:
     '''
 
     def get_winner(self):
-        if len(self.players[0]) == 0:
-            return 0
-        elif len(self.players[1]) == 0:
-            return 1
-        else:
-            score0 = sum(sum(t) for t in self.players[0])
-            score1 = sum(sum(t) for t in self.players[1])
-            if score0 == score1:
-                return -1
-            return 0 if score0 < score1 else 1
+        # Calculate total pip count for each player
+        player_scores = []
+        for i, hand in enumerate(self.players):
+            total = sum(tile[0] + tile[1] for tile in hand)
+            player_scores.append((i, total))
 
+        # Sort players by score (lowest total wins)
+        player_scores.sort(key=lambda x: x[1])
+
+        # Check for a tie (two or more players with the same lowest score)
+        lowest_score = player_scores[0][1]
+        tied_players = [i for i, score in player_scores if score == lowest_score]
+
+        if len(tied_players) > 1:
+            return -1  # Tie
+        else:
+            return player_scores[0][0]  # Index of the winning player
 
 # ------------ GUI ------------
 
@@ -172,6 +186,14 @@ class DominoGUI:
         if self.game.ai_should_start:
             self.root.after(500, self.ai_turn)
 
+        if self.game.current_player != 0:
+            self.status_label.config(
+                text=f"AI {self.game.current_player} starts with (6|6)"
+            )
+            self.root.after(1000, self.ai_turn)
+        else:
+            self.status_label.config(text="You start with (6|6)!")
+
     '''
     Toggles the music playback between playing and pausing.
     (Why not? It was a few lines of code)
@@ -191,13 +213,22 @@ class DominoGUI:
     '''
 
     def draw_board(self):
-        for widget in self.board_frame.winfo_children():
-            widget.destroy()
-        for tile, player in self.game.board:
-            tile_str = f"[{tile[0]}|{tile[1]}]"
-            color = 'blue' if player == 0 else 'red'
-            tk.Label(self.board_frame, text=tile_str, font=('Courier', 14), relief='ridge',
-                     padx=6, pady=4, fg=color).pack(side=tk.LEFT)
+            for widget in self.board_frame.winfo_children():
+                widget.destroy()
+
+            for tile, player in self.game.board:
+                color = 'blue' if player == 0 else 'red'
+
+                if tile[0] == tile[1]:  # It's a double - display vertically
+                    frame = tk.Frame(self.board_frame)
+                    tk.Label(frame, text=f"{tile[0]}", font=('Courier', 12), fg=color,bg= 'white', relief='ridge').pack()
+                    tk.Label(frame, text=f"{tile[1]}", font=('Courier', 12), fg=color,bg= 'white', relief='ridge').pack()
+                    frame.pack(side=tk.LEFT, padx=4)
+                else:
+                    # Regular horizontal display
+                    tile_str = f"{tile[0]}|{tile[1]}"
+                    tk.Label(self.board_frame, text=tile_str, font=('Courier', 14), relief='ridge',
+                             padx=6, pady=4, fg=color, bg='white').pack(side=tk.LEFT)
 
     '''
     Draws the player's hand, displaying their available tiles and valid moves.
@@ -210,7 +241,7 @@ class DominoGUI:
         valid_moves = self.game.get_valid_moves(hand)
         for tile in hand:
             tile_str = f"[{tile[0]}|{tile[1]}]"
-            btn = tk.Button(self.hand_frame, text=tile_str, font=('Courier', 12), relief='raised',
+            btn = tk.Button(self.hand_frame, text=tile_str, font=('Courier', 12), relief='raised',fg = 'blue',
                             state=tk.NORMAL if tile in valid_moves else tk.DISABLED,
                             command=lambda t=tile: self.play_tile(t))
             btn.pack(side=tk.LEFT, padx=4)
@@ -352,12 +383,29 @@ class DominoGUI:
 
     def end_game(self):
         winner = self.game.get_winner()
+
+        # Optional: Print all players' remaining points
+        player_scores = [
+            (i, sum(t[0] + t[1] for t in hand), hand)
+            for i, hand in enumerate(self.game.players)
+        ]
+        score_lines = "\n".join(
+            f"Player {i} ({'You' if i == 0 else 'AI'}): {score} points | Tiles: {hand}"
+            for i, score, hand in player_scores
+        )
+        print("Final scores (lower is better):")
+        for i, score, hand in player_scores:
+            print(f"Player {i}: {score} points")
+
         if winner == 0:
-            msg = "Human Wins! 🚶"
-        elif winner == 1:
-            msg = "AI wins! 🤖 "
-        else:
+            msg = "🎉 You win!"
+        elif winner == -1:
             msg = "🤝 It's a tie!"
+        else:
+            msg = f"🤖 AI {winner} wins!"
+
+        msg += "\nFinal Scores:\n" + score_lines
+
         messagebox.showinfo("Game Over", msg)
         self.root.quit()
 
