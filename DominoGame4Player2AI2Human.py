@@ -5,24 +5,27 @@ from tkinter import messagebox
 import copy
 import pygame
 
-
 '''
-Okay so this mode is under construction. It currently has 3 AI agaisnt a player but
+Okay so this mode is under construction. It currently has 3 AI against a player but
 the order is not clear of who goes when. There is not a feature to have teams or have multiple
-human players yet. Also the window is kinda hard to view when there are this many players
-
+human players yet. Also the window is kinda hard to view when there are this many players.
+Now we update it to be 2 players (human) vs 2 AI and add a pass-and-play screen for the human turn.
 '''
+
+# -------------- Game Logic --------------
 
 class DominoGame:
     def __init__(self):
         self.tiles = [(i, j) for i in range(7) for j in range(i, 7)]
         random.shuffle(self.tiles)
+        # Deal 7 tiles to each of 4 players (players: 0 and 2 = human; 1 and 3 = AI)
         self.players = [self.tiles[i*7:(i+1)*7] for i in range(4)]
         self.stock = self.tiles[28:]
         self.board = deque()
         self.board_owners = deque()  # To track who placed each tile
         self.current_player = 0
         self.passes = 0
+        # Find the (6,6) to start the game
         for i, hand in enumerate(self.players):
             if (6, 6) in hand:
                 self.current_player = (i + 1) % 4
@@ -30,7 +33,6 @@ class DominoGame:
                 self.board.append((6, 6))  # Place it on the board
                 self.board_owners.append(i)  # Track who played it
                 break
-
 
     def is_valid_move(self, tile, end):
         return end in tile
@@ -80,8 +82,6 @@ class DominoGame:
 
         # Sort players by score (lowest total wins)
         player_scores.sort(key=lambda x: x[1])
-
-        # Check for a tie (two or more players with the same lowest score)
         lowest_score = player_scores[0][1]
         tied_players = [i for i, score in player_scores if score == lowest_score]
 
@@ -90,17 +90,22 @@ class DominoGame:
         else:
              return player_scores[0][0]  # Index of the winning player
 
-# ------------ GUI ------------
+# -------------- GUI --------------
 
 class DominoGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Domino - 4 Players (You vs 3 AI)")
+        self.root.title("Domino - 2 Players vs 2 AI (Pass-and-Play)")
         self.game = DominoGame()
 
         self.player_colors = ['blue', 'red', 'green', 'purple']
+        # In our new order, player indices:
+        # 0: Player 1 (human, blue)
+        # 1: AI 1 (red)
+        # 2: Player 2 (human, green)
+        # 3: AI 2 (purple)
 
-        # Layout
+        # Layout (keeping original aesthetic)
         self.board_frame = tk.Frame(root)
         self.board_frame.pack(pady=10)
 
@@ -111,11 +116,11 @@ class DominoGUI:
         self.canvas_scrollbar.pack(fill=tk.X)
 
         self.board_canvas = tk.Canvas(self.board_frame, width=self.canvas_width, height=self.canvas_height,
-                                      bg='light gray',xscrollcommand=self.canvas_scrollbar.set,
-    scrollregion=(0, 0, 5000, 300)
-                                      )
+                                      bg='light gray', xscrollcommand=self.canvas_scrollbar.set,
+                                      scrollregion=(0, 0, 5000, 300))
         self.board_canvas.pack(side=tk.TOP, fill=tk.X)
         self.canvas_scrollbar.config(command=self.board_canvas.xview)
+
         self.scroll_button_frame = tk.Frame(self.board_frame)
         self.scroll_button_frame.pack(pady=5)
 
@@ -134,7 +139,7 @@ class DominoGUI:
         self.controls_frame = tk.Frame(root)
         self.controls_frame.pack(pady=10)
 
-        #Leyend
+        # Legend Frame (update to show the two human players and 2 AI)
         self.legend_frame = tk.Frame(root)
         self.legend_frame.pack(pady=5)
 
@@ -142,12 +147,11 @@ class DominoGUI:
         self.legend_label.pack(side=tk.LEFT)
 
         legend_info = [
-            ("You", 'blue'),
+            ("Player 1", 'blue'),
             ("AI 1", 'red'),
-            ("AI 2", 'green'),
-            ("AI 3", 'purple'),
+            ("Player 2", 'green'),
+            ("AI 2", 'purple'),
         ]
-
         for name, color in legend_info:
             label = tk.Label(self.legend_frame, text=f"{name}", fg=color, font=("Arial", 10, 'bold'))
             label.pack(side=tk.LEFT, padx=5)
@@ -164,32 +168,41 @@ class DominoGUI:
         self.music_button.pack(side=tk.LEFT, padx=5)
 
         # Labels
-        self.status_label = tk.Label(self.info_frame, text="Your turn!")
+        self.status_label = tk.Label(self.info_frame, text="Your turn!", font=("Arial", 12))
         self.status_label.pack(side=tk.LEFT, padx=10)
 
-        self.ai_labels = [tk.Label(self.info_frame, text=f"AI {i} has 7 tiles") for i in range(1, 4)]
+        # Only for the AIs
+        self.ai_labels = [
+            tk.Label(self.info_frame, text=f"AI 1 has 7 tiles", font=("Arial", 10)),
+            tk.Label(self.info_frame, text=f"AI 2 has 7 tiles", font=("Arial", 10))
+        ]
         for label in self.ai_labels:
             label.pack(side=tk.RIGHT, padx=5)
 
+        # For pass-and-play between human players (Player 1 and Player 2)
+        self.last_human = None  # To check which human last played
+
         self.draw_board()
         self.draw_hand()
-        if self.game.current_player != 0:
-            self.status_label.config(
-                text=f"AI {self.game.current_player} starts with (6|6)"
-            )
+        # If game started on non-human turn, process accordingly.
+        if self.game.current_player not in [0, 2]:
+            self.status_label.config(text=f"AI {self.game.current_player} starts with (6|6)")
             self.root.after(1000, self.ai_turn)
         else:
-            self.status_label.config(text="You start with (6|6)!")
+            self.status_label.config(text=self.human_status_text())
 
+    def human_status_text(self):
+        # Return appropriate status for human: indicate Player 1 or Player 2.
+        if self.game.current_player == 0:
+            return "Your turn! (Player 1)"
+        else:
+            return "Your turn! (Player 2)"
 
     def scroll_left(self):
-        current_x = self.board_canvas.canvasx(0)
-        self.board_canvas.xview_scroll(-1, "units")  # Scroll left by one unit
+        self.board_canvas.xview_scroll(-1, "units")
 
     def scroll_right(self):
-        current_x = self.board_canvas.canvasx(0)
-        self.board_canvas.xview_scroll(1, "units")  # Scroll right by one unit
-
+        self.board_canvas.xview_scroll(1, "units")
 
     def toggle_music(self):
         if self.music_on:
@@ -202,7 +215,7 @@ class DominoGUI:
 
     def draw_board(self):
         self.board_canvas.delete("all")
-        x, y = 500, 150  # Start position
+        x, y = 500, 150  # Start position for board drawing
         tile_positions = []
 
         for i, tile in enumerate(self.game.board):
@@ -225,28 +238,76 @@ class DominoGUI:
                 tile_positions.append((x, 60))
                 x += 70
 
-            self.board_canvas.config(scrollregion=(0,0, max(x+100,1000), 300))
+            self.board_canvas.config(scrollregion=(0, 0, max(x + 100, 1000), 300))
             if tile_positions:
                 latest_x = tile_positions[-1][0]
                 canvas_view_x = max(latest_x - self.canvas_width // 2, 0)
                 self.board_canvas.xview_moveto(canvas_view_x / (max(x + 100, 1000)))
 
     def draw_hand(self):
+        # Clear the hand frame first
         for widget in self.hand_frame.winfo_children():
             widget.destroy()
-        hand = self.game.players[0]
+        player = self.game.current_player
+        hand = self.game.players[player]
         valid_moves = self.game.get_valid_moves(hand)
+        # Display the complete hand (7 tiles at game start, or remaining tiles)
         for tile in hand:
             tile_str = f"[{tile[0]}|{tile[1]}]"
-            btn = tk.Button(self.hand_frame, text=tile_str, font=('Courier', 12), relief='raised', fg='blue',
+            btn = tk.Button(self.hand_frame, text=tile_str, font=('Courier', 12), relief='raised',
+                            fg=self.player_colors[player],
                             state=tk.NORMAL if tile in valid_moves else tk.DISABLED,
                             command=lambda t=tile: self.play_tile(t))
             btn.pack(side=tk.LEFT, padx=4)
 
+    def show_pass_screen(self, next_player):
+        # Create a Toplevel modal window that covers the current game window,
+        # asking the next human player to press Ready (so that they cannot see the previous hand).
+        pass_screen = tk.Toplevel(self.root)
+        pass_screen.grab_set()
+        pass_screen.geometry("400x200+400+200")
+        pass_screen.title("Pass Device")
+        msg = ""
+        if next_player == 0:
+            msg = "Pass device to Player 1\n\n(Ensure previous hand is not visible.)"
+        elif next_player == 2:
+            msg = "Pass device to Player 2\n\n(Ensure previous hand is not visible.)"
+        label = tk.Label(pass_screen, text=msg, font=("Arial", 14))
+        label.pack(expand=True)
+        btn = tk.Button(pass_screen, text="I'm Ready", font=("Arial", 12),
+                        command=lambda: self.close_pass_screen(pass_screen))
+        btn.pack(pady=10)
+        # Wait until user clicks ready.
+        self.root.wait_window(pass_screen)
+
+    def close_pass_screen(self, window):
+        window.destroy()
+        # After closing, update status and show hand for new human turn.
+        self.status_label.config(text=self.human_status_text())
+        self.draw_hand()
+
+    def after_move(self):
+        self.draw_board()
+        self.update_ai_tile_counts()
+        if self.game.is_game_over():
+            self.end_game()
+        else:
+            # If next turn is human, check if pass screen is needed.
+            if self.game.current_player in [0, 2]:
+                # If changing human players, show pass screen.
+                if self.last_human is None or self.last_human != self.game.current_player:
+                    self.last_human = self.game.current_player
+                    self.show_pass_screen(self.game.current_player)
+                self.status_label.config(text=self.human_status_text())
+                self.draw_hand()
+            else:
+                self.root.after(500, self.ai_turn)
+
     def play_tile(self, tile):
         try:
-            self.game.play_tile(0, tile)
-            self.game.current_player = (self.game.current_player + 1) % 4  # <-- Fix is here
+            # Use the current player's hand (will be 0 or 2)
+            self.game.play_tile(self.game.current_player, tile)
+            self.game.current_player = (self.game.current_player + 1) % 4
             self.after_move()
         except Exception as e:
             messagebox.showerror("Invalid Move", str(e))
@@ -257,53 +318,43 @@ class DominoGUI:
         self.after_move()
 
     def draw_tile(self):
-        tile = self.game.draw_from_stock(0)
+        tile = self.game.draw_from_stock(self.game.current_player)
         if tile:
             self.status_label.config(text=f"You drew {tile}")
         else:
             self.status_label.config(text="Stock is empty")
         self.draw_hand()
 
-    def after_move(self):
-        self.draw_board()
-        self.draw_hand()
-        self.update_ai_tile_counts()
-
-        if self.game.is_game_over():
-            self.end_game()
-        else:
-            self.root.after(500, self.ai_turn)
-
     def ai_turn(self):
-        if self.game.current_player == 0 or self.game.is_game_over():
+        # If it’s a human turn or game is over, process accordingly.
+        if self.game.current_player in [0, 2] or self.game.is_game_over():
             if self.game.is_game_over():
                 self.end_game()
             else:
-                self.status_label.config(text="Your turn!")
+                self.status_label.config(text=self.human_status_text())
                 self.draw_hand()
             return
 
         cp = self.game.current_player
         hand = self.game.players[cp]
         valid_moves = self.game.get_valid_moves(hand)
-
+        # If no valid move exists, draw from stock until a move is possible or stock empty
         while not valid_moves and self.game.stock:
-            drawn = self.game.draw_from_stock(cp) # Se borra pq no se usa???
+            self.game.draw_from_stock(cp)
             valid_moves = self.game.get_valid_moves(self.game.players[cp])
 
-        move = self.monte_carlo_ai_move(cp, simulations=25)
+        # Use monte-carlo simulation for AI move if possible
+        move = self.monte_carlo_ai_move(cp, simulations=25) if valid_moves else None
         if move:
             self.game.play_tile(cp, move)
-            self.status_label.config(text=f"AI {cp} played {move}")
+            self.status_label.config(text=f"AI {1 if cp==1 else 2} played {move}")
         else:
             self.game.pass_turn()
-            self.status_label.config(text=f"AI {cp} passed")
-
+            self.status_label.config(text=f"AI {1 if cp==1 else 2} passed")
         self.draw_board()
         self.update_ai_tile_counts()
         self.game.current_player = (self.game.current_player + 1) % 4
-
-        self.root.after(1000, self.ai_turn) # delay between AI turns
+        self.root.after(1000, self.ai_turn)
 
     def monte_carlo_ai_move(self, player_index, simulations=25):
         hand = self.game.players[player_index]
@@ -342,42 +393,43 @@ class DominoGUI:
         return sim_game.get_winner()
 
     def update_ai_tile_counts(self):
-        for i in range(1, 4):
-            self.ai_labels[i - 1].config(text=f"AI {i} has {len(self.game.players[i])} tiles")
+        # Update labels for AI 1 (index 1) and AI 2 (index 3)
+        self.ai_labels[0].config(text=f"AI 1 has {len(self.game.players[1])} tiles")
+        self.ai_labels[1].config(text=f"AI 2 has {len(self.game.players[3])} tiles")
 
     def end_game(self):
         winner = self.game.get_winner()
-
         # Optional: Print all players' remaining points
         player_scores = [
             (i, sum(t[0] + t[1] for t in hand), hand)
             for i, hand in enumerate(self.game.players)
         ]
         score_lines = "\n".join(
-            f"Player {i} ({'You' if i == 0 else 'AI'}): {score} points | Tiles: {hand}"
+            f"Player {i} ({'You' if i in [0,2] else 'AI'}): {score} points | Tiles: {hand}"
             for i, score, hand in player_scores
         )
         print("Final scores (lower is better):")
         for i, score, hand in player_scores:
             print(f"Player {i}: {score} points")
 
-        if winner == 0:
+        if winner == 0 or winner == 2:
             msg = "🎉 You win!"
         elif winner == -1:
             msg = "🤝 It's a tie!"
         else:
-            msg = f"🤖 AI {winner} wins!"
+            # For AI wins, indicate which AI won (mapping index 1->AI1 and index 3->AI2)
+            msg = f"🤖 AI {1 if winner==1 else 2} wins!"
 
         msg += "\nFinal Scores:\n" + score_lines
 
         messagebox.showinfo("Game Over", msg)
         self.root.quit()
 
-# ------------ Run the App ------------
+# -------------- Run the App --------------
 
 if __name__ == "__main__":
     pygame.mixer.init()
-    pygame.mixer.music.load("BGM.mp3")
+    pygame.mixer.music.load("BGM.mp3")  # Ensure this file exists in your directory
     pygame.mixer.music.play(-1)
 
     root = tk.Tk()
