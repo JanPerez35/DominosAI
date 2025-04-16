@@ -263,6 +263,7 @@ class DominoGUI:
     def show_pass_screen(self, next_player):
         # Create a Toplevel modal window that covers the current game window,
         # asking the next human player to press Ready (so that they cannot see the previous hand).
+        print(f"Showing pass screen for player {self.game.current_player}")
         pass_screen = tk.Toplevel(self.root)
         pass_screen.grab_set()
         pass_screen.geometry("400x200+400+200")
@@ -294,13 +295,15 @@ class DominoGUI:
         else:
             # If next turn is human, check if pass screen is needed.
             if self.game.current_player in [0, 2]:
-                # If changing human players, show pass screen.
-                if self.last_human is None or self.last_human != self.game.current_player:
-                    self.last_human = self.game.current_player
-                    self.show_pass_screen(self.game.current_player)
+                # Always show pass screen between human turns
+                #if self.last_human is None or self.last_human != self.game.current_player:
+                print(f"Showing pass screen for player {self.game.current_player}")
+                self.show_pass_screen(self.game.current_player)
+                self.last_human = self.game.current_player
                 self.status_label.config(text=self.human_status_text())
                 self.draw_hand()
             else:
+                self.last_human = None  # reset since it's an AI's turn
                 self.root.after(500, self.ai_turn)
 
     def play_tile(self, tile):
@@ -354,7 +357,7 @@ class DominoGUI:
         self.draw_board()
         self.update_ai_tile_counts()
         self.game.current_player = (self.game.current_player + 1) % 4
-        self.root.after(1000, self.ai_turn)
+        self.root.after(1000, self.after_move)
 
     def monte_carlo_ai_move(self, player_index, simulations=25):
         hand = self.game.players[player_index]
