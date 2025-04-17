@@ -315,7 +315,7 @@ class DominoGUI:
         )
 
         if winner == 0:
-            msg = "🎉 You win!"
+            msg = f"🤖 AI {winner} wins!"
         elif winner == -1:
             msg = "🤝 It's a tie!"
         else:
