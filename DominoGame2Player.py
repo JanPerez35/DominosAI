@@ -28,32 +28,27 @@ class DominoGame:
         # Checks who passed
         self.passes = 0
         #find highest double in players' hands
-        highest_double = None
+        self.highest_double = None
         self.ai_should_start = False  # Flag to trigger AI move at start
+        self.starting_player = 0 # Index of the player who starts the game
 
         for n in range(6, -1, -1):
             if (n, n) in self.players[0]:
-                highest_double = (n, n)
+                self.highest_double = (n, n)
                 self.players[0].remove((n, n))
                 self.board.append(((n, n), 0))
+                self.starting_player = 0
                 self.current_player = 1  # AI goes next
                 self.ai_should_start = True
                 break
             elif (n, n) in self.players[1]:
-                highest_double = (n, n)
+                self.highest_double = (n, n)
                 self.players[1].remove((n, n))
                 self.board.append(((n, n), 1))
+                self.starting_player = 1
                 self.current_player = 0  # Human goes next
                 break
-
-        for i, hand in enumerate(self.players):
-            if (6, 6) in hand:
-                self.current_player = (i + 1) % 4
-                hand.remove((6, 6))  # Remove from hand
-                self.board.append((6, 6))  # Place it on the board
-                self.board_owners.append(i)  # Track who played it
-                break
-
+                        
     '''
     Verifies if the move is valid, meaning if the tile you want to use matches with a corner
     '''
@@ -183,16 +178,15 @@ class DominoGUI:
 
         self.draw_board()
         self.draw_hand()
-        if self.game.ai_should_start:
-            self.root.after(500, self.ai_turn)
+        self.update_ai_tile_count()
 
-        if self.game.current_player != 0:
+        if self.game.starting_player != 0:
             self.status_label.config(
-                text=f"AI {self.game.current_player} starts with (6|6)"
-            )
-            self.root.after(1000, self.ai_turn)
+                text=f"AI starts with {self.game.highest_double}!"
+            )            
         else:
-            self.status_label.config(text="You start with (6|6)!")
+            self.status_label.config(text=f"You start with {self.game.highest_double}!")
+            self.root.after(1000, self.ai_turn)            
 
     '''
     Toggles the music playback between playing and pausing.
@@ -402,7 +396,7 @@ class DominoGUI:
         elif winner == -1:
             msg = "🤝 It's a tie!"
         else:
-            msg = f"🤖 AI {winner} wins!"
+            msg = f"🤖 AI wins!"
 
         msg += "\nFinal Scores:\n" + score_lines
 
