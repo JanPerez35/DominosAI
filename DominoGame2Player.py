@@ -10,7 +10,6 @@ Class that starts the domino game. It creates the dominos, shuffles them, sets t
 stock, board, player that's currently playing and the passes. 
 '''
 
-
 class DominoGame:
     def __init__(self):
         # This creates the tiles
