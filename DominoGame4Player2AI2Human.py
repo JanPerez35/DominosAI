@@ -453,6 +453,7 @@ class DominoGUI:
             return None
 
         move_scores = {}
+        #makes a simulation for all valid moves.
         for move in valid_moves:
             total_score = 0
             for _ in range(simulations):
@@ -462,13 +463,19 @@ class DominoGUI:
                 except:
                     continue
                 winner = self.simulate_random_playout(sim_game)
+                #if winner in the simulated game is the AI agent move gets a point
                 total_score += 1 if winner == player_index else 0
             move_scores[move] = total_score / simulations
-
+        #chooses best move based on currently applicable moves
         best_move = max(move_scores, key=move_scores.get)
         return best_move
 
     def simulate_random_playout(self, sim_game):
+        '''
+        Simulates a random outcome for the current game and simulates what the highest score play would be
+        :param sim_game: recreation of current game state to be simulated.
+        :return: winner of simulated game.
+        '''
         current = sim_game.current_player
         while not sim_game.is_game_over():
             hand = sim_game.players[current]
