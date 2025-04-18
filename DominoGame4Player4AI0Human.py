@@ -147,10 +147,10 @@ class DominoGUI:
 
         if team_mode:
             legend_info = [
-                ("AI 0 (Team A)" if team_mode else "AI 0", self.player_colors[0]),
-                ("AI 1 (Team B)" if team_mode else "AI 1", self.player_colors[1]),
-                ("AI 2 (Team A)" if team_mode else "AI 2", self.player_colors[2]),
-                ("AI 3 (Team B)" if team_mode else "AI 3", self.player_colors[3]),
+                ("AI 0 (Team 0)" if team_mode else "AI 0", self.player_colors[0]),
+                ("AI 1 (Team 1)" if team_mode else "AI 1", self.player_colors[1]),
+                ("AI 2 (Team 0)" if team_mode else "AI 2", self.player_colors[2]),
+                ("AI 3 (Team 1)" if team_mode else "AI 3", self.player_colors[3]),
             ]
         else:
             legend_info = [

@@ -78,9 +78,9 @@ class DominoGame:
             team_0_score = sum(tile[0] + tile[1] for i in [0, 2] for tile in self.players[i])
             team_1_score = sum(tile[0] + tile[1] for i in [1, 3] for tile in self.players[i])
             if team_0_score < team_1_score:
-                return "Team A"
+                return "Team 0"
             elif team_1_score < team_0_score:
-                return "Team B"
+                return "Team 1"
             else:
                 return -1  # Tie
         else:
@@ -157,10 +157,10 @@ class DominoGUI:
 
         if team_mode:
             legend_info = [
-                ("Player 1 (Team A)" if team_mode else "AI 0", self.player_colors[0]),
-                ("AI 1 (Team B)" if team_mode else "AI 1", self.player_colors[1]),
-                ("AI  (Team A)" if team_mode else "AI 2", self.player_colors[2]),
-                ("AI 3 (Team B)" if team_mode else "AI 3", self.player_colors[3]),
+                ("Player 1 (Team 0)" if team_mode else "AI 0", self.player_colors[0]),
+                ("AI 1 (Team 1)" if team_mode else "AI 1", self.player_colors[1]),
+                ("AI 2 (Team 0)" if team_mode else "AI 2", self.player_colors[2]),
+                ("AI 3 (Team 1)" if team_mode else "AI 3", self.player_colors[3]),
             ]
         else:
             legend_info = [
@@ -387,7 +387,7 @@ class DominoGUI:
                 for i, score, hand in player_scores
             )
             msg = "🤝 It's a tie!" if winner == -1 else f"🎉 {winner} wins!"
-            msg += f"\n\nTeam A score: {team_0_score}\nTeam B score: {team_1_score}"
+            msg += f"\n\nTeam 0 score: {team_0_score}\nTeam 1 score: {team_1_score}"
             msg += "\n\nFinal Player Scores:\n" + team_lines
 
             messagebox.showinfo("Game Over", msg)
