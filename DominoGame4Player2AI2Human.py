@@ -5,6 +5,7 @@ from tkinter import messagebox
 import copy
 import pygame
 import sys
+import argparse
 
 '''
 Okay so this mode is under construction. It currently has 3 AI against a player but
@@ -16,7 +17,18 @@ Now we update it to be 2 players (human) vs 2 AI and add a pass-and-play screen 
 # -------------- Game Logic --------------
 
 class DominoGame:
-    def __init__(self,team_mode):
+    def __init__(self,team_mode,layout):
+        self.team_mode = team_mode
+        self.layout = layout
+
+        # define teams based on layout choice
+        if layout == "ai_pairs":
+            # human 0 + AI 1 vs human 2 + AI 3
+            self.teams = [[0, 1], [2, 3]]
+        else:
+            # both humans (0,2) vs both AIs (1,3)
+            self.teams = [[0, 2], [1, 3]]
+
         self.tiles = [(i, j) for i in range(7) for j in range(i, 7)]
         random.shuffle(self.tiles)
         # Deal 7 tiles to each of 4 players (players: 0 and 2 = human; 1 and 3 = AI)
@@ -26,7 +38,6 @@ class DominoGame:
         self.board_owners = deque()  # To track who placed each tile
         self.current_player = 0
         self.passes = 0
-        self.team_mode = team_mode
         # Find the (6,6) to start the game
         for i, hand in enumerate(self.players):
             if (6, 6) in hand:
@@ -84,34 +95,43 @@ class DominoGame:
             tied_players = [i for i, score in player_scores if score == lowest_score]
             return -1 if len(tied_players) > 1 else player_scores[0][0]
         else:
-            # Team mode: Teams are (0,2) and (1,3)
-            team_0_score = sum(tile[0] + tile[1] for i in [0, 2] for tile in self.players[i])
-            team_1_score = sum(tile[0] + tile[1] for i in [1, 3] for tile in self.players[i])
-            if team_0_score < team_1_score:
-                return "Team A"
-            elif team_1_score < team_0_score:
-                return "Team B"
+            team_scores = []
+            for team in self.teams:
+                total = sum(tile[0] + tile[1]
+                            for player in team
+                            for tile in self.players[player])
+                team_scores.append(total)
+
+            if team_scores[0] < team_scores[1]:
+                return "Team 1"
+            elif team_scores[1] < team_scores[0]:
+                return "Team 2"
             else:
-                return -1  # Tie
+                return -1  # tie
 
 # -------------- GUI --------------
 
 class DominoGUI:
-    def __init__(self, root,team_mode):
+    def __init__(self, root, team_mode, layout):
         self.root = root
         self.root.title("Domino - 2 Players vs 2 AI (Pass-and-Play)")
-        self.game = DominoGame(team_mode)  #############################################
+        # initialize game logic with both flags
+        self.game = DominoGame(team_mode, layout)
 
-        if team_mode:
-            self.player_colors = ['blue', 'red', 'blue', 'red']
+        # ─── Color mapping ───────────────────────────────────────────────
+        if self.game.team_mode:
+            # Team mode: two teams → two colors
+            palette = ['blue', 'red']
+            self.player_colors = [None] * 4
+            for team_index, team in enumerate(self.game.teams):
+                for player_index in team:
+                    self.player_colors[player_index] = palette[team_index]
         else:
+            # Free-for-all: four distinct colors
             self.player_colors = ['blue', 'red', 'green', 'purple']
+        # ─────────────────────────────────────────────────────────────────
+
         self.game_over = False
-        # In our new order, player indices:
-        # 0: Player 1 (human, blue)
-        # 1: AI 1 (red)
-        # 2: Player 2 (human, green)
-        # 3: AI 2 (purple)
 
         # Layout (keeping original aesthetic)
         self.board_frame = tk.Frame(root)
@@ -123,18 +143,21 @@ class DominoGUI:
         self.canvas_scrollbar = tk.Scrollbar(self.board_frame, orient=tk.HORIZONTAL)
         self.canvas_scrollbar.pack(fill=tk.X)
 
-        self.board_canvas = tk.Canvas(self.board_frame, width=self.canvas_width, height=self.canvas_height,
-                                      bg='light gray', xscrollcommand=self.canvas_scrollbar.set,
-                                      scrollregion=(0, 0, 5000, 300))
+        self.board_canvas = tk.Canvas(
+            self.board_frame,
+            width=self.canvas_width,
+            height=self.canvas_height,
+            bg='light gray',
+            xscrollcommand=self.canvas_scrollbar.set,
+            scrollregion=(0, 0, 5000, 300)
+        )
         self.board_canvas.pack(side=tk.TOP, fill=tk.X)
         self.canvas_scrollbar.config(command=self.board_canvas.xview)
 
         self.scroll_button_frame = tk.Frame(self.board_frame)
         self.scroll_button_frame.pack(pady=5)
-
         self.scroll_left_btn = tk.Button(self.scroll_button_frame, text=" Scroll Left", command=self.scroll_left)
         self.scroll_left_btn.pack(side=tk.LEFT, padx=5)
-
         self.scroll_right_btn = tk.Button(self.scroll_button_frame, text="Scroll Right ", command=self.scroll_right)
         self.scroll_right_btn.pack(side=tk.LEFT, padx=5)
 
@@ -147,35 +170,41 @@ class DominoGUI:
         self.controls_frame = tk.Frame(root)
         self.controls_frame.pack(pady=10)
 
-        # Legend Frame (update to show the two human players and 2 AI)
+        # Legend Frame
         self.legend_frame = tk.Frame(root)
         self.legend_frame.pack(pady=5)
+        tk.Label(self.legend_frame, text="Legend:").pack(side=tk.LEFT)
 
-        self.legend_label = tk.Label(self.legend_frame, text="Legend:")
-        self.legend_label.pack(side=tk.LEFT)
-        if team_mode:
-            legend_info = [
-                ("Player 1 (Team A)" if team_mode else "AI 0", self.player_colors[0]),
-                ("AI 1 (Team B)" if team_mode else "AI 1", self.player_colors[1]),
-                ("Player 2 (Team A)" if team_mode else "AI 2", self.player_colors[2]),
-                ("AI 2 (Team B)" if team_mode else "AI 3", self.player_colors[3]),
-            ]
+        if self.game.team_mode:
+            # Team legend with team numbers
+            for team_index, team in enumerate(self.game.teams):
+                for p in team:
+                    name = (
+                        "Player 1" if p == 0 else
+                        "AI 1" if p == 1 else
+                        "Player 2" if p == 2 else
+                        "AI 2"
+                    )
+                    tk.Label(
+                        self.legend_frame,
+                        text=f"{name} (Team {team_index + 1})",
+                        fg=self.player_colors[p],
+                        font=("Arial", 10, "bold")
+                    ).pack(side=tk.LEFT, padx=5)
         else:
-            legend_info = [
-                ("Player 1", 'blue'),
-                ("AI 1", 'red'),
-                ("Player 2", 'green'),
-                ("AI 2", 'purple'),
-            ]
+            # Free-for-all legend, no teams
+            names = ["Player 1", "AI 1", "Player 2", "AI 2"]
+            for i, name in enumerate(names):
+                tk.Label(
+                    self.legend_frame,
+                    text=name,
+                    fg=self.player_colors[i],
+                    font=("Arial", 10, "bold")
+                ).pack(side=tk.LEFT, padx=5)
 
-        for name, color in legend_info:
-            label = tk.Label(self.legend_frame, text=f"{name}", fg=color, font=("Arial", 10, 'bold'))
-            label.pack(side=tk.LEFT, padx=5)
-
-        # Buttons
+        # Control Buttons
         self.pass_button = tk.Button(self.controls_frame, text="Pass Turn", command=self.pass_turn)
         self.pass_button.pack(side=tk.LEFT, padx=5)
-
         self.draw_button = tk.Button(self.controls_frame, text="Draw Tile", command=self.draw_tile)
         self.draw_button.pack(side=tk.LEFT, padx=5)
 
@@ -183,24 +212,22 @@ class DominoGUI:
         self.music_button = tk.Button(self.controls_frame, text="Mute Music", command=self.toggle_music)
         self.music_button.pack(side=tk.LEFT, padx=5)
 
-        # Labels
+        # Status & AI tile‐counts
         self.status_label = tk.Label(self.info_frame, text="Your turn!", font=("Arial", 12))
         self.status_label.pack(side=tk.LEFT, padx=10)
-
-        # Only for the AIs
         self.ai_labels = [
-            tk.Label(self.info_frame, text=f"AI 1 has 7 tiles", font=("Arial", 10)),
-            tk.Label(self.info_frame, text=f"AI 2 has 7 tiles", font=("Arial", 10))
+            tk.Label(self.info_frame, text=f"AI 1 has {len(self.game.players[1])} tiles", font=("Arial", 10)),
+            tk.Label(self.info_frame, text=f"AI 2 has {len(self.game.players[3])} tiles", font=("Arial", 10))
         ]
         for label in self.ai_labels:
             label.pack(side=tk.RIGHT, padx=5)
 
-        # For pass-and-play between human players (Player 1 and Player 2)
-        self.last_human = None  # To check which human last played
+        # For pass-and-play between human players
+        self.last_human = None
 
+        # Initial draw/setup
         self.draw_board()
         self.draw_hand()
-        # If game started on non-human turn, process accordingly.
         if self.game.current_player not in [0, 2]:
             self.status_label.config(text=f"AI {self.game.current_player} starts with (6|6)")
             self.root.after(1000, self.ai_turn)
@@ -459,11 +486,32 @@ class DominoGUI:
 # -------------- Run the App --------------
 
 if __name__ == "__main__":
-    team_mode = "--team" in sys.argv
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--team",
+        action="store_true",
+        help="Enable team mode"
+    )
+    parser.add_argument(
+        "--layout",
+        choices=["ai_pairs", "humans_team"],
+        default="ai_pairs",
+        help=(
+            "ai_pairs: each human teams with an AI\n"
+            "humans_team: both humans vs both AIs"
+        )
+    )
+    args = parser.parse_args()
+
+    team_mode = args.team
+    layout   = args.layout
+
     pygame.mixer.init()
     pygame.mixer.music.load("BGM.mp3")
     pygame.mixer.music.play(-1)
 
     root = tk.Tk()
-    app = DominoGUI(root,team_mode)
+    # pass both flags into your GUI
+    app = DominoGUI(root, team_mode, layout)
     root.mainloop()
+    sys.exit()
