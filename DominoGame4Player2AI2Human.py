@@ -99,6 +99,12 @@ class DominoGame:
         return any(len(p) == 0 for p in self.players) or self.passes >= 4
 
     def get_winner(self):
+        '''
+        Adds up all the scores for the game.
+        If its in teams adds the scores for the teams together, if not individual scores to determine
+        second place onwards.
+
+        '''
         if not self.team_mode:
             # Free-for-all winner: lowest pip count
             player_scores = [(i, sum(tile[0] + tile[1] for tile in hand)) for i, hand in enumerate(self.players)]
@@ -269,10 +275,13 @@ class DominoGUI:
         self.music_on = not self.music_on
 
     def draw_board(self):
+        '''
+        Draws current state of the board
+        '''
         self.board_canvas.delete("all")
         x, y = 500, 150  # Start position for board drawing
         tile_positions = []
-
+        #puts color on the tiles depending on team.
         for i, tile in enumerate(self.game.board):
             owner = self.game.board_owners[i]
             if self.game.team_mode:
@@ -304,6 +313,9 @@ class DominoGUI:
                 self.board_canvas.xview_moveto(canvas_view_x / (max(x + 100, 1000)))
 
     def draw_hand(self):
+        '''
+        Draws current state of the hand for the player in turn.
+        '''
         # Clear the hand frame first
         for widget in self.hand_frame.winfo_children():
             widget.destroy()
@@ -349,7 +361,6 @@ class DominoGUI:
     def after_move(self):
         '''
         Called after a player makes a move to update the loop logic.
-
         '''
         self.draw_board()
         self.update_ai_tile_counts()
