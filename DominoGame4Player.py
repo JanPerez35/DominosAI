@@ -6,43 +6,108 @@ import copy
 import pygame
 import sys
 
-'''
-Okay so this mode is under construction. It currently has 3 AI against a player but
-the order is not clear of who goes when. There is not a feature to have teams or have multiple
-human players yet. Also the window is kinda hard to view when there are this many players
+"""
+Domino game utilizing Monter Carlo AI opponent
 
-'''
+This class defines the DominoGame logic and a corresponding GUI class
+called DominoGUI to play a dominoes game between a human and an AI. This
+game specifically utilizes rules from Puerto Rico so it is not a traditional
+domino score based game.
+"""
 
 class DominoGame:
+    """
+            Core game logic for Domino.
+
+            Handles tile creation, shuffling, dealing, move validation, drawing from stock,
+            turn passing, and determining game end and winner. Uses a Monte Carlo
+            approach for AI decision-making.
+
+            Attributes:
+                tiles (List[Tuple[int, int]]): All domino tiles in the game.
+                players (List[List[Tuple[int, int]]]): Two players' hands.
+                stock (List[Tuple[int, int]]): Remaining tiles to draw.
+                board (Deque[Tuple[Tuple[int, int], int]]): Placed tiles with their owner index.
+                current_player (int): Index of the player whose turn it is (0 or 1).
+                passes (int): Number of consecutive passes.
+                highest_double (Optional[Tuple[int, int]]): The highest starting double.
+                ai_should_start (bool): Flag indicating if AI plays first.
+                starting_player (int): Index of the player who started.
+            """
+
     def __init__(self, team_mode):
+
+        """
+        Initialize the game by creating, shuffling, and dealing tiles,
+        setting up player hands, stock, board, and determining first player
+        based on the 6|6 tile.
+
+        Args:
+            team_mode (bool): Enable team scoring if True.
+        """
+
         self.tiles = [(i, j) for i in range(7) for j in range(i, 7)]
         random.shuffle(self.tiles)
         self.players = [self.tiles[i*7:(i+1)*7] for i in range(4)]
         self.stock = self.tiles[28:]
         self.board = deque()
-        self.board_owners = deque()  # To track who placed each tile
+        # To track who placed each tile
+        self.board_owners = deque()
         self.current_player = 0
         self.passes = 0
         self.team_mode = team_mode
+        #Determine starting player with the highest double
         for i, hand in enumerate(self.players):
             if (6, 6) in hand:
                 self.current_player = (i + 1) % 4
-                hand.remove((6, 6))  # Remove from hand
-                self.board.append((6, 6))  # Place it on the board
-                self.board_owners.append(i)  # Track who played it
+                # Remove from hand
+                hand.remove((6, 6))
+                # Place it on the board
+                self.board.append((6, 6))
+                # Track who played it
+                self.board_owners.append(i)
                 break
 
 
     def is_valid_move(self, tile, end):
+        """
+                       Checks if a tile can be placed at one end of the board or the other.
+
+                       Args:
+                           tile (Tuple[int, int]): The domino tile to check.
+                           end (int): The number at the board end to match.
+
+                       Returns:
+                           bool: True if the tile contains the value 'end'.
+                       """
         return end in tile
 
     def get_valid_moves(self, hand):
+        """
+                       List valid moves for a given hand based on current board ends.
+                       If the board is empty, any tile is valid.
+
+                       Args:
+                           hand (List[Tuple[int, int]]): The player's current hand.
+
+                       Returns:
+                           List[Tuple[int, int]]: Tiles that can be legally played.
+                       """
         if not self.board:
             return hand
         left, right = self.board[0][0], self.board[-1][1]
         return [t for t in hand if self.is_valid_move(t, left) or self.is_valid_move(t, right)]
 
     def draw_from_stock(self, player):
+        """
+                    Draw a tile from the stock for a player if available.
+
+                    Args:
+                        player (int): Index of the player drawing (0 or 1).
+
+                    Returns:
+                        Optional[Tuple[int, int]]: The drawn tile, or None if stock is empty.
+                        """
         if self.stock:
             drawn_tile = self.stock.pop()
             self.players[player].append(drawn_tile)
@@ -50,6 +115,18 @@ class DominoGame:
         return None
 
     def play_tile(self, player, tile):
+        """
+                     Place a tile on the board for a player if the move is valid.
+
+                    Tiles are oriented correctly to match the board end.
+
+                    Args:
+                        player (int): Index of the player playing (0 or 1).
+                        tile (Tuple[int, int]): The tile to play.
+
+                    Raises:
+                        ValueError: If the move is invalid.
+                    """
         if not self.board:
             self.board.append(tile)
             self.board_owners.append(player)
@@ -67,12 +144,33 @@ class DominoGame:
         self.passes = 0
 
     def pass_turn(self):
+        """
+                Verifies a pass for the current player, incrementing the pass counter.
+                        """
         self.passes += 1
 
     def is_game_over(self):
+        """
+             Check if the game has ended.
+
+            The game ends when a player has no tiles or both players pass consecutively.
+            This was done to avoid infinite looping.
+
+                Returns:
+                    bool: True if the game is over.
+                """
         return any(len(p) == 0 for p in self.players) or self.passes >= 4
 
     def get_winner(self):
+        """
+                    Determine the winner of the game.
+
+                    If a player emptied their hand, they win. Otherwise, the player with
+                    the lowest pip count wins; ties return -1.
+
+                    Returns:
+                        int: Winning player index (0 or 1), or -1 for a tie.
+                    """
         # Calculate total pip count for each player
         if self.team_mode:
             team_0_score = sum(tile[0] + tile[1] for i in [0, 2] for tile in self.players[i])
@@ -99,12 +197,27 @@ class DominoGame:
             if len(tied_players) > 1:
                  return -1  # Tie
             else:
-                 return player_scores[0][0]  # Index of the winning player
+                # Index of the winning player
+                 return player_scores[0][0]
 
-# ------------ GUI ------------
+
 
 class DominoGUI:
+    """
+          GUI for DominoGame using Tkinter, with Monte Carlo AI opponent.
+
+          Provides controls for playing, drawing, passing, and displays game state.
+          """
+
     def __init__(self, root, team_mode):
+        """
+               Initialize GUI components, set up game and layout frames,
+               and begin game loop after initial placement.
+
+               Args:
+                   root (tk.Tk): Main Tkinter window.
+                   team_mode (bool): Enable team scoring visuals.
+               """
         self.root = root
         self.root.title("Domino - 4 Players (You vs 3 AI)")
         self.game = DominoGame(team_mode)
@@ -114,7 +227,7 @@ class DominoGUI:
         else:
             self.player_colors = ['blue', 'red', 'green', 'purple']
 
-        # Layout
+        # Frames for Layout
         self.board_frame = tk.Frame(root)
         self.board_frame.pack(pady=10)
 
@@ -126,7 +239,7 @@ class DominoGUI:
 
         self.board_canvas = tk.Canvas(self.board_frame, width=self.canvas_width, height=self.canvas_height,
                                       bg='light gray',xscrollcommand=self.canvas_scrollbar.set,
-    scrollregion=(0, 0, 5000, 300)
+        scrollregion=(0, 0, 5000, 300)
                                       )
         self.board_canvas.pack(side=tk.TOP, fill=tk.X)
         self.canvas_scrollbar.config(command=self.board_canvas.xview)
@@ -174,7 +287,7 @@ class DominoGUI:
             label = tk.Label(self.legend_frame, text=f"{name}", fg=color, font=("Arial", 10, 'bold'))
             label.pack(side=tk.LEFT, padx=5)
 
-        # Buttons
+        # Control Buttons
         self.pass_button = tk.Button(self.controls_frame, text="Pass Turn", command=self.pass_turn)
         self.pass_button.pack(side=tk.LEFT, padx=5)
 
@@ -185,7 +298,7 @@ class DominoGUI:
         self.music_button = tk.Button(self.controls_frame, text="Mute Music", command=self.toggle_music)
         self.music_button.pack(side=tk.LEFT, padx=5)
 
-        # Labels
+        #Status Labels
         self.status_label = tk.Label(self.info_frame, text="Your turn!")
         self.status_label.pack(side=tk.LEFT, padx=10)
 
@@ -195,6 +308,7 @@ class DominoGUI:
 
         self.draw_board()
         self.draw_hand()
+        #Announces starting player
         if self.game.current_player != 0:
             self.status_label.config(
                 text=f"AI {self.game.current_player} starts with (6|6)"
@@ -205,15 +319,24 @@ class DominoGUI:
 
 
     def scroll_left(self):
+        """
+         Scroll left by one unit
+        """
         current_x = self.board_canvas.canvasx(0)
-        self.board_canvas.xview_scroll(-1, "units")  # Scroll left by one unit
+        self.board_canvas.xview_scroll(-1, "units")
 
     def scroll_right(self):
+        """
+        Scroll right by one unit
+        """
         current_x = self.board_canvas.canvasx(0)
-        self.board_canvas.xview_scroll(1, "units")  # Scroll right by one unit
+        self.board_canvas.xview_scroll(1, "units")
 
 
     def toggle_music(self):
+        """
+            Toggles the background music's play/pause state.
+            """
         if self.music_on:
             pygame.mixer.music.pause()
             self.music_button.config(text="Play Music")
@@ -223,8 +346,12 @@ class DominoGUI:
         self.music_on = not self.music_on
 
     def draw_board(self):
+        """
+             Render the current domino board in the GUI.
+                """
         self.board_canvas.delete("all")
-        x, y = 500, 150  # Start position
+        # Start position
+        x, y = 500, 150
         tile_positions = []
 
         for i, tile in enumerate(self.game.board):
@@ -254,6 +381,9 @@ class DominoGUI:
                 self.board_canvas.xview_moveto(canvas_view_x / (max(x + 100, 1000)))
 
     def draw_hand(self):
+        """
+             Render the human player's hand with buttons for valid moves.
+            """
         for widget in self.hand_frame.winfo_children():
             widget.destroy()
         hand = self.game.players[0]
@@ -266,6 +396,12 @@ class DominoGUI:
             btn.pack(side=tk.LEFT, padx=4)
 
     def play_tile(self, tile):
+        """
+            Handle the human player's play action and update state.
+
+            Args:
+                tile (Tuple[int, int]): Tile chosen by player.
+            """
         try:
             self.game.play_tile(0, tile)
             self.game.current_player = (self.game.current_player + 1) % 4  # <-- Fix is here
@@ -274,11 +410,17 @@ class DominoGUI:
             messagebox.showerror("Invalid Move", str(e))
 
     def pass_turn(self):
+        """
+            Handles when a human player is passing their turn.
+            """
         self.game.pass_turn()
         self.game.current_player = (self.game.current_player + 1) % 4
         self.after_move()
 
     def draw_tile(self):
+        """
+            Handles human player drawing from stock and update GUI.
+            """
         tile = self.game.draw_from_stock(0)
         if tile:
             self.status_label.config(text=f"You drew {tile}")
@@ -287,6 +429,9 @@ class DominoGUI:
         self.draw_hand()
 
     def after_move(self):
+        """
+            Update board and hand after a move and trigger AI or end game.
+            """
         self.draw_board()
         self.draw_hand()
         self.update_ai_tile_counts()
@@ -297,6 +442,9 @@ class DominoGUI:
             self.root.after(500, self.ai_turn)
 
     def ai_turn(self):
+        """
+            Perform AI turn using Monte Carlo simulations for decision-making.
+            """
         if self.game.current_player == 0 or self.game.is_game_over():
             if self.game.is_game_over():
                 self.end_game()
@@ -328,7 +476,17 @@ class DominoGUI:
         self.root.after(1000, self.ai_turn) # delay between AI turns
 
 
-    def monte_carlo_ai_move(self, player_index, simulations=25):
+    def monte_carlo_ai_move(self, player_index, simulations=30):
+        """
+            Evaluate possible moves via Monte Carlo playouts and return best one.
+            Currently, it runs 30 simulations per move.
+
+            Args:
+                simulations (int): Number of random playouts per move.
+
+            Returns:
+                Optional[Tuple[int, int]]: Best tile to play or None to pass.
+            """
         hand = self.game.players[player_index]
         valid_moves = self.game.get_valid_moves(hand)
         if not valid_moves:
@@ -351,6 +509,15 @@ class DominoGUI:
         return best_move
 
     def simulate_random_playout(self, sim_game):
+        """
+            Run a random playout until game end to estimate outcome.
+
+            Args:
+                sim_game (DominoGame): Game state copy.
+
+            Returns:
+                int: Winning player index or -1 for tie.
+                """
         current = sim_game.current_player
         while not sim_game.is_game_over():
             hand = sim_game.players[current]
@@ -365,10 +532,16 @@ class DominoGUI:
         return sim_game.get_winner()
 
     def update_ai_tile_counts(self):
+        """
+            Refresh label showing how many tiles AI holds.
+            """
         for i in range(1, 4):
             self.ai_labels[i - 1].config(text=f"AI {i} has {len(self.game.players[i])} tiles")
 
     def end_game(self):
+        """
+            Handle end-of-game display and exit. Displays who wins.
+                """
         winner = self.game.get_winner()
 
         # Optional: Print all players' remaining points
@@ -414,11 +587,12 @@ class DominoGUI:
             messagebox.showinfo("Game Over", msg)
             self.root.quit()
 
-# ------------ Run the App ------------
+#This area runs the app
 
 if __name__ == "__main__":
     team_mode = "--team" in sys.argv
     pygame.mixer.init()
+    # Copyright free music to set the mood for the game. Just a fun addition.
     pygame.mixer.music.load("BGM.mp3")
     pygame.mixer.music.play(-1)
 

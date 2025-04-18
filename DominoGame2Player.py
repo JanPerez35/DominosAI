@@ -206,7 +206,8 @@ class DominoGame:
         if len(tied_players) > 1:
             return -1  # Tie
         else:
-            return player_scores[0][0]  # Index of the winning player
+            # Index of the winning player
+            return player_scores[0][0]
 
 
 class DominoGUI:
@@ -475,7 +476,7 @@ class DominoGUI:
         msg += f"\nFinal Scores:\n{summary}"
         messagebox.showinfo("Game Over", msg)
         self.root.quit()
-
+#This area runs the app
 
 if __name__ == "__main__":
     pygame.mixer.init()
