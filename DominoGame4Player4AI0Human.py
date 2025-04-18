@@ -80,15 +80,15 @@ class DominoGame:
             tied_players = [i for i, score in player_scores if score == lowest_score]
             return -1 if len(tied_players) > 1 else player_scores[0][0]
         else:
-            # Team mode: Teams are (0,2) and (1,3)
-            team_0_score = sum(tile[0] + tile[1] for i in [0, 2] for tile in self.players[i])
-            team_1_score = sum(tile[0] + tile[1] for i in [1, 3] for tile in self.players[i])
-            if team_0_score < team_1_score:
-                return "Team 0 & 2"
-            elif team_1_score < team_0_score:
-                return "Team 1 & 3"
+            # Team mode: teams are (0,2) vs (1,3)
+            team0 = sum(a + b for i in (0, 2) for a, b in self.players[i])
+            team1 = sum(a + b for i in (1, 3) for a, b in self.players[i])
+            if team0 < team1:
+                return 0
+            elif team1 < team0:
+                return 1
             else:
-                return -1  # Tie
+                return -1
 
 # ------------ GUI ------------
 
@@ -322,25 +322,27 @@ class DominoGUI:
         self.game_over = True
         winner = self.game.get_winner()
         if self.game.team_mode:
+            team_names = ["Team 0 (Players 0 & 2)", "Team 1 (Players 1 & 3)"]
             if winner == -1:
-                msg = "🤝 It's a tie between the teams!"
+                msg = "🤝 It's a tie between both teams!"
             else:
-                msg = f"🏆 {winner} wins!"
+                msg = f"🏆 {team_names[winner]} wins!"
         else:
             if winner == -1:
                 msg = "🤝 It's a tie!"
             else:
                 msg = f"🤖 AI {winner} wins!"
-        player_scores = [
-            (i, sum(t[0] + t[1] for t in hand), hand)
-            for i, hand in enumerate(self.game.players)
-        ]
-        score_lines = "\n".join(
-            f"AI {i}: {score} points"
-            for i, score, hand in player_scores
-        )
-
-        msg += "\nFinal Scores:\n" + score_lines
+                # build final scores
+                scores = [sum(a + b for a, b in hand) for hand in self.game.players]
+                if self.game.team_mode:
+                    # show both teams' pip totals
+                    t0 = scores[0] + scores[2]
+                    t1 = scores[1] + scores[3]
+                    msg += f"\n\nTeam 0 total: {t0}\nTeam 1 total: {t1}"
+                else:
+                    # list each AI’s score
+                    lines = "\n".join(f"AI {i}: {s} pips" for i, s in enumerate(scores))
+                    msg += "\n\nFinal Scores:\n" + lines
 
         messagebox.showinfo("Game Over", msg)
         self.root.quit()
