@@ -1,11 +1,11 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, simpledialog
 import subprocess
 import os
 import sys
 
 # Define paths to the game modes
-GAME_MODES = {
+game_modes = {
     "1 Players vs 1 AI":           "DominoGame2Player.py",
     "2 AI Players (Spectate)":     "DominoGame2Player2AI0Human.py",
     "3 Players vs 1 AI":           "DominoGame4Player1AI3Human.py",
@@ -13,6 +13,7 @@ GAME_MODES = {
     "1 Player vs  3 AI":           "DominoGame4Player.py",
     "All 4 Players AI (Spectate)": "DominoGame4Player4AI0Human.py"
 }
+
 
 def launch_game(path, team_mode, layout=None):
     """Launches the given script, passing --team and optionally --layout."""
@@ -27,60 +28,82 @@ def launch_game(path, team_mode, layout=None):
             args += ["--layout", layout]
     subprocess.Popen(args)
 
+
 def on_2v2_click(path):
     """
-    Handler for the '2 Players vs 2 AI' button.
+    Handler for '2 Players vs 2 AI'.
     If team_mode is checked, ask which layout they want.
     """
     if team_mode_var.get():
-        # Ask the user which team setup they want:
-        # Yes → both humans on one team (humans_team)
-        # No  → mixed human–AI pairs (ai_pairs)
         want_human_team = messagebox.askyesno(
             title="Choose Team Setup",
             message=(
                 "Would you like a human team (both humans vs both AIs)?\n\n"
-                "Click Yes for Humans Together\n"
-                "Click No for Mixed Teams (1 human + 1 AI per team)"
+                "Yes = Humans Together, No = Mixed Teams (1 human + 1 AI)"
             )
         )
         layout = "humans_team" if want_human_team else "ai_pairs"
         launch_game(path, True, layout)
     else:
-        # If checkbox isn’t checked, just launch free‑for‑all
         launch_game(path, False)
+
+
+def on_3p1AI_click(path):
+    """
+    Handler for '3 Players vs 1 AI'.
+    Always ask which human pairs with the AI.
+    """
+    # Ask user which player to pair with the AI
+    choice = simpledialog.askinteger(
+        title="Choose Team Setup",
+        prompt=(
+            "Which human should pair with the AI?\n"
+            "Enter 1 for Player 1 + AI,\n"
+            "2 for Player 2 + AI,\n"
+            "3 for Player 3 + AI."
+        ),
+        minvalue=1,
+        maxvalue=3
+    )
+    if choice is None:
+        return
+    # layout codes: p1, p2, p3
+    layout = f"p{choice}"
+    # team_mode True to enable parsing --layout
+    launch_game(path, True, layout)
+
 
 # Set up the menu window
 root = tk.Tk()
 root.title("Domino Game Menu")
-root.geometry("600x400")
+root.geometry("600x450")
 
 tk.Label(root, text="Select Game Mode", font=("Helvetica", 16)).pack(pady=20)
 
-# Add checkbox for team mode
+# Checkbox for team mode (applies only to 2v2)
 team_mode_var = tk.BooleanVar()
-team_checkbox = tk.Checkbutton(
+tk.Checkbutton(
     root,
     text="Enable Team Mode (2 vs 2)",
     variable=team_mode_var,
     font=("Helvetica", 12)
-)
-team_checkbox.pack(pady=10)
+).pack(pady=10)
 
 # Buttons to launch game modes
-for mode, path in GAME_MODES.items():
+for mode, path in game_modes.items():
     if mode == "2 Players vs 2 AI":
         cmd = lambda p=path: on_2v2_click(p)
+    elif mode == "3 Players vs 1 AI":
+        cmd = lambda p=path: on_3p1AI_click(p)
     else:
         cmd = lambda p=path: launch_game(p, team_mode_var.get())
 
-    btn = tk.Button(
+    tk.Button(
         root,
         text=mode,
         font=("Helvetica", 12),
-        width= 30,
+        width=30,
         command=cmd
-    )
-    btn.pack(pady=5)
+    ).pack(pady=5)
 
 root.mainloop()
