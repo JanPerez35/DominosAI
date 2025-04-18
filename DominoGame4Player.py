@@ -4,17 +4,17 @@ import tkinter as tk
 from tkinter import messagebox
 import copy
 import pygame
-
+import sys
 
 '''
-Okay so this mode is under construction. It currently has 3 AI agaisnt a player but
+Okay so this mode is under construction. It currently has 3 AI against a player but
 the order is not clear of who goes when. There is not a feature to have teams or have multiple
 human players yet. Also the window is kinda hard to view when there are this many players
 
 '''
 
 class DominoGame:
-    def __init__(self):
+    def __init__(self, team_mode):
         self.tiles = [(i, j) for i in range(7) for j in range(i, 7)]
         random.shuffle(self.tiles)
         self.players = [self.tiles[i*7:(i+1)*7] for i in range(4)]
@@ -23,6 +23,7 @@ class DominoGame:
         self.board_owners = deque()  # To track who placed each tile
         self.current_player = 0
         self.passes = 0
+        self.team_mode = team_mode
         for i, hand in enumerate(self.players):
             if (6, 6) in hand:
                 self.current_player = (i + 1) % 4
@@ -73,32 +74,45 @@ class DominoGame:
 
     def get_winner(self):
         # Calculate total pip count for each player
-        player_scores = []
-        for i, hand in enumerate(self.players):
-            total = sum(tile[0] + tile[1] for tile in hand)
-            player_scores.append((i, total))
-
-        # Sort players by score (lowest total wins)
-        player_scores.sort(key=lambda x: x[1])
-
-        # Check for a tie (two or more players with the same lowest score)
-        lowest_score = player_scores[0][1]
-        tied_players = [i for i, score in player_scores if score == lowest_score]
-
-        if len(tied_players) > 1:
-             return -1  # Tie
+        if self.team_mode:
+            team_0_score = sum(tile[0] + tile[1] for i in [0, 2] for tile in self.players[i])
+            team_1_score = sum(tile[0] + tile[1] for i in [1, 3] for tile in self.players[i])
+            if team_0_score < team_1_score:
+                return "Team A"
+            elif team_1_score < team_0_score:
+                return "Team B"
+            else:
+                return -1  # Tie
         else:
-             return player_scores[0][0]  # Index of the winning player
+            player_scores = []
+            for i, hand in enumerate(self.players):
+                total = sum(tile[0] + tile[1] for tile in hand)
+                player_scores.append((i, total))
+
+            # Sort players by score (lowest total wins)
+            player_scores.sort(key=lambda x: x[1])
+
+            # Check for a tie (two or more players with the same lowest score)
+            lowest_score = player_scores[0][1]
+            tied_players = [i for i, score in player_scores if score == lowest_score]
+
+            if len(tied_players) > 1:
+                 return -1  # Tie
+            else:
+                 return player_scores[0][0]  # Index of the winning player
 
 # ------------ GUI ------------
 
 class DominoGUI:
-    def __init__(self, root):
+    def __init__(self, root, team_mode):
         self.root = root
         self.root.title("Domino - 4 Players (You vs 3 AI)")
-        self.game = DominoGame()
+        self.game = DominoGame(team_mode)
 
-        self.player_colors = ['blue', 'red', 'green', 'purple']
+        if team_mode:
+            self.player_colors = ['blue', 'red', 'blue', 'red']
+        else:
+            self.player_colors = ['blue', 'red', 'green', 'purple']
 
         # Layout
         self.board_frame = tk.Frame(root)
@@ -141,12 +155,20 @@ class DominoGUI:
         self.legend_label = tk.Label(self.legend_frame, text="Legend:")
         self.legend_label.pack(side=tk.LEFT)
 
-        legend_info = [
-            ("You", 'blue'),
-            ("AI 1", 'red'),
-            ("AI 2", 'green'),
-            ("AI 3", 'purple'),
-        ]
+        if team_mode:
+            legend_info = [
+                ("Player 1 (Team A)" if team_mode else "AI 0", self.player_colors[0]),
+                ("AI 1 (Team B)" if team_mode else "AI 1", self.player_colors[1]),
+                ("AI  (Team A)" if team_mode else "AI 2", self.player_colors[2]),
+                ("AI 3 (Team B)" if team_mode else "AI 3", self.player_colors[3]),
+            ]
+        else:
+            legend_info = [
+                ("Player 1", 'blue'),
+                ("AI 1", 'red'),
+                ("AI 2", 'green'),
+                ("AI 3", 'purple'),
+            ]
 
         for name, color in legend_info:
             label = tk.Label(self.legend_frame, text=f"{name}", fg=color, font=("Arial", 10, 'bold'))
@@ -305,6 +327,7 @@ class DominoGUI:
 
         self.root.after(1000, self.ai_turn) # delay between AI turns
 
+
     def monte_carlo_ai_move(self, player_index, simulations=25):
         hand = self.game.players[player_index]
         valid_moves = self.game.get_valid_moves(hand)
@@ -353,33 +376,52 @@ class DominoGUI:
             (i, sum(t[0] + t[1] for t in hand), hand)
             for i, hand in enumerate(self.game.players)
         ]
-        score_lines = "\n".join(
-            f"Player {i} ({'You' if i == 0 else 'AI'}): {score} points | Tiles: {hand}"
-            for i, score, hand in player_scores
-        )
-        print("Final scores (lower is better):")
-        for i, score, hand in player_scores:
-            print(f"Player {i}: {score} points")
 
-        if winner == 0:
-            msg = "🎉 You win!"
-        elif winner == -1:
-            msg = "🤝 It's a tie!"
+        if self.game.team_mode:
+            # Team-based scoring
+            team_0_score = sum(score for i, score, _ in player_scores if i in [0, 2])
+            team_1_score = sum(score for i, score, _ in player_scores if i in [1, 3])
+
+            team_lines = "\n".join(
+                f"Player {i} ({'You' if i ==0  else 'AI'}): {score} points | Tiles: {hand}"
+                for i, score, hand in player_scores
+            )
+            msg = "🤝 It's a tie!" if winner == -1 else f"🎉 {winner} wins!"
+            msg += f"\n\nTeam A score: {team_0_score}\nTeam B score: {team_1_score}"
+            msg += "\n\nFinal Player Scores:\n" + team_lines
+
+            messagebox.showinfo("Game Over", msg)
+            self.root.quit()
         else:
-            msg = f"🤖 AI {winner} wins!"
+          # Free-for-all scoring
+            score_lines = "\n".join(
+                f"Player {i} ({'You' if i == 0 else 'AI'}): {score} points | Tiles: {hand}"
+                for i, score, hand in player_scores
+            )
+            print("Final scores (lower is better):")
+            for i, score, hand in player_scores:
+                print(f"Player {i}: {score} points")
 
-        msg += "\nFinal Scores:\n" + score_lines
+            if winner == 0:
+                msg = "🎉 You win!"
+            elif winner == -1:
+                msg = "🤝 It's a tie!"
+            else:
+                msg = f"🤖 AI {winner} wins!"
 
-        messagebox.showinfo("Game Over", msg)
-        self.root.quit()
+            msg += "\nFinal Scores:\n" + score_lines
+
+            messagebox.showinfo("Game Over", msg)
+            self.root.quit()
 
 # ------------ Run the App ------------
 
 if __name__ == "__main__":
+    team_mode = "--team" in sys.argv
     pygame.mixer.init()
     pygame.mixer.music.load("BGM.mp3")
     pygame.mixer.music.play(-1)
 
     root = tk.Tk()
-    app = DominoGUI(root)
+    app = DominoGUI(root, team_mode)
     root.mainloop()

@@ -4,13 +4,13 @@ import os
 import sys
 
 
-
 # Define paths to the game modes
 GAME_MODES = {
     "1 Players vs 1 AI": "DominoGame2Player.py",
-    "2 AI players": "DominoGame2Player2AI0Human.py",
+    "2 AI Players (Spectate)": "DominoGame2Player2AI0Human.py",
     "3 Players vs 1 AI": "DominoGame4Player1AI3Human.py",
     "2 Players vs 2 AI": "DominoGame4Player2AI2Human.py",
+    "1 Player vs  3 AI": "DominoGame4Player.py",
     "All 4 Players AI (Spectate)": "DominoGame4Player4AI0Human.py"
 }
 

@@ -88,9 +88,9 @@ class DominoGame:
             team_0_score = sum(tile[0] + tile[1] for i in [0, 2] for tile in self.players[i])
             team_1_score = sum(tile[0] + tile[1] for i in [1, 3] for tile in self.players[i])
             if team_0_score < team_1_score:
-                return "Team 0 & 2"
+                return "Team A"
             elif team_1_score < team_0_score:
-                return "Team 1 & 3"
+                return "Team B"
             else:
                 return -1  # Tie
 
@@ -436,7 +436,7 @@ class DominoGUI:
                 f"Player {i} ({'You' if i in [0, 1, 2] else 'AI'}): {score} points | Tiles: {hand}"
                 for i, score, hand in player_scores
             )
-            msg = "🤝 It's a tie!" if winner == -1 else f"🎉 {winner} win!"
+            msg = "🤝 It's a tie!" if winner == -1 else f"🎉 {winner} wins!"
             msg += f"\n\nTeam 0 & 2 score: {team_0_score}\nTeam 1 & 3 score: {team_1_score}"
             msg += "\n\nFinal Player Scores:\n" + team_lines
         else:
