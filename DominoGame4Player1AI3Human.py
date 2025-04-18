@@ -442,7 +442,7 @@ class DominoGUI:
 
     def update_ai_tile_counts(self):
         # Update labels for AI 1 (index 1) and AI 2 (index 3)
-        self.ai_labels[0].config(text=f"AI 1 has {len(self.game.players[3])} tiles")
+        self.ai_label.config(text=f"AI 1 has {len(self.game.players[3])} tiles")
 
     def end_game(self):
         winner = self.game.get_winner()
