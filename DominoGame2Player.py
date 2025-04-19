@@ -2,6 +2,7 @@ import random
 from collections import deque
 import tkinter as tk
 from tkinter import messagebox
+from PerformanceMeasure import PerformanceTracker #importing the performance tracker
 import copy
 import pygame
 
@@ -142,8 +143,9 @@ Class that handles the GUI and interacts with the game logic for user and AI int
 
 
 class DominoGUI:
-    def __init__(self, root):
+    def __init__(self, root, tracker):
         self.root = root
+        self.tracker = PerformanceTracker() #tracker added
         self.root.title("Domino - You vs AI (Monte Carlo)")
         self.game = DominoGame()
 
@@ -371,6 +373,28 @@ class DominoGUI:
         self.ai_tiles_label.config(text=f"AI has {len(self.game.players[1])} tiles")
 
     '''
+    Starts a new game.
+    '''
+    def start_new_game(self):
+        self.game = DominoGame()
+        
+        for widget in self.board_frame.winfo_children():
+            widget.destroy()
+        for widget in self.hand_frame.winfo_children():
+            widget.destroy()
+
+        self.draw_board()
+        self.draw_hand()
+        self.update_ai_tile_count()
+
+        if self.game.starting_player != 0:
+            self.status_label.config(text=f"AI starts with {self.game.highest_double}!")
+            
+        else:
+            self.status_label.config(text=f"You start with {self.game.highest_double}!")
+            self.root.after(1000, self.ai_turn)
+
+    '''
     Ends the game and displays the winner.
     '''
 
@@ -389,6 +413,10 @@ class DominoGUI:
         print("Final scores (lower is better):")
         for i, score, hand in player_scores:
             print(f"Player {i}: {score} points")
+            # Stores the scores for human and AI
+            if i == 0:
+                human_score = score
+            else: ai_score = score
 
         if winner == 0:
             msg = "🎉 You win!"
@@ -400,7 +428,20 @@ class DominoGUI:
         msg += "\nFinal Scores:\n" + score_lines
 
         messagebox.showinfo("Game Over", msg)
-        self.root.quit()
+
+        #Performance Tracking 
+        self.tracker.update_tracker(winner, human_score, ai_score, False, 0, 0)
+        self.tracker.report()
+
+        #Play again option
+        play_again = messagebox.askyesno(
+            title="Play again?",
+            message="Would you like to play again?"
+        )
+        if play_again:
+            self.start_new_game()
+        else:
+            self.root.quit()
 
 
 # ------------ Run the App ------------
@@ -411,6 +452,7 @@ if __name__ == "__main__":
     pygame.mixer.music.load("BGM.mp3")
     pygame.mixer.music.play(-1)
 
+    tracker = PerformanceTracker() #tracker added
     root = tk.Tk()
-    app = DominoGUI(root)
+    app = DominoGUI(root, tracker) #tracker added
     root.mainloop()
