@@ -7,12 +7,6 @@ import pygame
 import sys
 import argparse
 
-'''
-Okay so this mode is under construction. It currently has 3 AI against a player but
-the order is not clear of who goes when. There is not a feature to have teams or have multiple
-human players yet. Also the window is kinda hard to view when there are this many players.
-Now we update it to be 2 players (human) vs 2 AI and add a pass-and-play screen for the human turn.
-'''
 
 # -------------- Game Logic --------------
 
@@ -48,15 +42,26 @@ class DominoGame:
                 break
 
     def is_valid_move(self, tile, end):
+        """Checks if move to be made is valid by cheeking the ends"""
         return end in tile
 
     def get_valid_moves(self, hand):
+        '''
+
+        :param hand: Hand the player(human or AI) has
+        :return: All valid moves that can be made by the player hand at the moment of turn.
+        '''
         if not self.board:
             return hand
         left, right = self.board[0][0], self.board[-1][1]
         return [t for t in hand if self.is_valid_move(t, left) or self.is_valid_move(t, right)]
 
     def draw_from_stock(self, player):
+        '''
+        Draws from left over pieces if there are any.
+        :param player: current player drawing.
+        :return: drawn tile that player didn't have.
+        '''
         if self.stock:
             drawn_tile = self.stock.pop()
             self.players[player].append(drawn_tile)
@@ -64,6 +69,13 @@ class DominoGame:
         return None
 
     def play_tile(self, player, tile):
+        '''
+        Places a tile on the board for current acting player.
+        first checks one side then the other if it's valid to put on the board.
+        :param player: current player putting on board.
+        :param tile: tile being placed on the board.
+
+        '''
         if not self.board:
             self.board.append(tile)
             self.board_owners.append(player)
@@ -87,6 +99,12 @@ class DominoGame:
         return any(len(p) == 0 for p in self.players) or self.passes >= 4
 
     def get_winner(self):
+        '''
+        Adds up all the scores for the game.
+        If its in teams adds the scores for the teams together, if not individual scores to determine
+        second place onwards.
+
+        '''
         if not self.team_mode:
             # Free-for-all winner: lowest pip count
             player_scores = [(i, sum(tile[0] + tile[1] for tile in hand)) for i, hand in enumerate(self.players)]
@@ -153,7 +171,7 @@ class DominoGUI:
         )
         self.board_canvas.pack(side=tk.TOP, fill=tk.X)
         self.canvas_scrollbar.config(command=self.board_canvas.xview)
-
+        #scrolling on the game
         self.scroll_button_frame = tk.Frame(self.board_frame)
         self.scroll_button_frame.pack(pady=5)
         self.scroll_left_btn = tk.Button(self.scroll_button_frame, text=" Scroll Left", command=self.scroll_left)
@@ -257,10 +275,13 @@ class DominoGUI:
         self.music_on = not self.music_on
 
     def draw_board(self):
+        '''
+        Draws current state of the board
+        '''
         self.board_canvas.delete("all")
         x, y = 500, 150  # Start position for board drawing
         tile_positions = []
-
+        #puts color on the tiles depending on team.
         for i, tile in enumerate(self.game.board):
             owner = self.game.board_owners[i]
             if self.game.team_mode:
@@ -292,6 +313,9 @@ class DominoGUI:
                 self.board_canvas.xview_moveto(canvas_view_x / (max(x + 100, 1000)))
 
     def draw_hand(self):
+        '''
+        Draws current state of the hand for the player in turn.
+        '''
         # Clear the hand frame first
         for widget in self.hand_frame.winfo_children():
             widget.destroy()
@@ -313,7 +337,7 @@ class DominoGUI:
         print(f"Showing pass screen for player {self.game.current_player}")
         pass_screen = tk.Toplevel(self.root)
         pass_screen.grab_set()
-        pass_screen.geometry("400x200+400+200")
+        pass_screen.geometry("600x400+350+200")
         pass_screen.title("Pass Device")
         msg = ""
         if next_player == 0:
@@ -335,6 +359,9 @@ class DominoGUI:
         self.draw_hand()
 
     def after_move(self):
+        '''
+        Called after a player makes a move to update the loop logic.
+        '''
         self.draw_board()
         self.update_ai_tile_counts()
         if self.game.is_game_over():
@@ -354,6 +381,12 @@ class DominoGUI:
                 self.root.after(500, self.ai_turn)
 
     def play_tile(self, tile):
+        '''
+
+        :param tile: tile to be played in that turn
+        if tile thrown out of turn or not valid will say so.
+
+        '''
         try:
             # Use the current player's hand (will be 0 or 2)
             self.game.play_tile(self.game.current_player, tile)
@@ -396,6 +429,7 @@ class DominoGUI:
         # Use monte-carlo simulation for AI move if possible
         move = self.monte_carlo_ai_move(cp, simulations=25) if valid_moves else None
         if move:
+            #plays the move made by monte_carlo simulation if possible for current AI player
             self.game.play_tile(cp, move)
             self.status_label.config(text=f"AI {1 if cp==1 else 2} played {move}")
         else:
@@ -407,12 +441,19 @@ class DominoGUI:
         self.root.after(1000, self.after_move)
 
     def monte_carlo_ai_move(self, player_index, simulations=25):
+        '''
+        Makes the simulations for all possible moves.
+        :param player_index: current AI player using the simulation
+        :param simulations: times to run monte_carlo simulations
+        :return: best possible move found.
+        '''
         hand = self.game.players[player_index]
         valid_moves = self.game.get_valid_moves(hand)
         if not valid_moves:
             return None
 
         move_scores = {}
+        #makes a simulation for all valid moves.
         for move in valid_moves:
             total_score = 0
             for _ in range(simulations):
@@ -422,13 +463,19 @@ class DominoGUI:
                 except:
                     continue
                 winner = self.simulate_random_playout(sim_game)
+                #if winner in the simulated game is the AI agent move gets a point
                 total_score += 1 if winner == player_index else 0
             move_scores[move] = total_score / simulations
-
+        #chooses best move based on currently applicable moves
         best_move = max(move_scores, key=move_scores.get)
         return best_move
 
     def simulate_random_playout(self, sim_game):
+        '''
+        Simulates a random outcome for the current game and simulates what the highest score play would be
+        :param sim_game: recreation of current game state to be simulated.
+        :return: winner of simulated game.
+        '''
         current = sim_game.current_player
         while not sim_game.is_game_over():
             hand = sim_game.players[current]
@@ -448,6 +495,10 @@ class DominoGUI:
         self.ai_labels[1].config(text=f"AI 2 has {len(self.game.players[3])} tiles")
 
     def end_game(self):
+        '''
+        Print out all winners and scores for the game played.
+        After terminate window.
+        '''
         winner = self.game.get_winner()
         # Optional: Print all players' remaining points
         player_scores = [
