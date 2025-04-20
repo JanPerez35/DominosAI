@@ -334,11 +334,9 @@ class DominoGUI:
         if self.game.current_player != 0:
             self.status_label.config(text=f"AI {self.game.current_player} starts with (6|6)!")
         else:
-            self.status_label.config(text=f"AI {self.game.current_player} starts with (6|6)!")
-
-        # Check if the first AI move is required and schedule it
-        #if self.game.current_player == 0:
-            # Delay to allow the game to update before the first move
+            self.status_label.config(text=f"AI {self.game.current_player} starts with (6|6)!")      
+        
+        # Delay to allow the game to update before the first move
         self.root.after(1000, self.ai_turn)
 
     '''
