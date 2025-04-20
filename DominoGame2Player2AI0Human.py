@@ -28,7 +28,7 @@ class DominoGame:
         self.current_player = 0
         # Checks who passed
         self.passes = 0
-        #find highest double in players' hands
+        # Find highest double in players' hands
         self.highest_double = None
         self.ai_should_start = False  # Flag to trigger AI move at start
         # Index of the player who starts the game
@@ -50,8 +50,6 @@ class DominoGame:
                 self.current_player = 0
                 self.starting_player = 1
                 break
-
-
 
     '''
     Verifies if the move is valid, meaning if the tile you want to use matches with a corner

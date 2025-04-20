@@ -247,35 +247,41 @@ class DominoGUI:
 
         if self.game.is_game_over():
             self.end_game()
-        else:
-            self.root.after(500, self.ai_turn)
 
     def ai_turn(self):
+        # end immediately if the game’s done
         if self.game.is_game_over():
             self.end_game()
             return
 
         ai_index = self.game.current_player
-        move = self.monte_carlo_ai_move(ai_index)
+        hand = self.game.players[ai_index]
+        valid = self.game.get_valid_moves(hand)
 
-        if move:
-            self.game.play_tile(ai_index, move)
-        elif self.game.stock:
+        # draw until we have a move or run out
+        while not valid and self.game.stock:
             self.game.draw_from_stock(ai_index)
-        else:
-            self.game.pass_turn()  # AI passes turn if no valid move & stock is empty
+            valid = self.game.get_valid_moves(self.game.players[ai_index])
 
-        self.game.current_player = (self.game.current_player + 1) % 4
+        # play or pass
+        if valid:
+            move = self.monte_carlo_ai_move(ai_index)
+            self.game.play_tile(ai_index, move)
+            self.status_label.config(text=f"AI {ai_index} played {move}")
+        else:
+            self.game.pass_turn()
+            self.status_label.config(text=f"AI {ai_index} passed")
+
+        # advance turn, redraw
+        self.game.current_player = (ai_index + 1) % 4
         self.draw_board()
         self.update_ai_tile_counts()
 
+        # schedule **only** one next call, after 2 s
         if self.game.is_game_over():
             self.end_game()
         else:
-            self.root.after(2000, self.ai_turn)
-
-        # Schedule the next AI turn
-        self.root.after(500, self.after_move)
+            self.root.after(500, self.ai_turn)
 
     def monte_carlo_ai_move(self, player_index, simulations=25):
         hand = self.game.players[player_index]
