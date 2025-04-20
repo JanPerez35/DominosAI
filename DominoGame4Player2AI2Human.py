@@ -2,7 +2,8 @@ import random
 from collections import deque
 import tkinter as tk
 from tkinter import messagebox
-from PerformanceMeasure import PerformanceTracker #importing the performance tracker
+#importing the performance tracker
+from PerformanceMeasure import PerformanceTracker
 import copy
 import pygame
 import sys
@@ -16,9 +17,9 @@ class DominoGame:
         self.team_mode = team_mode
         self.layout = layout
 
-        # define teams based on layout choice
+        # Defines teams based on layout choice
         if layout == "ai_pairs":
-            # human 0 + AI 1 vs human 2 + AI 3
+            # human 0 + Ai 1 vs human 2 + AI 3
             self.teams = [[0, 1], [2, 3]]
         else:
             # both humans (0,2) vs both AIs (1,3)
