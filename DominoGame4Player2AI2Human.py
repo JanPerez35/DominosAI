@@ -515,7 +515,7 @@ class DominoGUI:
         self.draw_hand()
         self.update_ai_tile_counts()
 
-        if self.game.current_player in [1, 3]:
+        if self.game.current_player in [0, 2]:
             self.status_label.config(text=f"AI {1 if self.game.current_player == 1 else 2} starts with (6|6)!")
             self.root.after(1000, self.ai_turn)
         else:
@@ -545,7 +545,7 @@ class DominoGUI:
             msg = "🤝 It's a tie!" if winner == -1 else f"🎉 {winner} wins!"
             msg += f"\n\nTeam 0 & 2 score: {team_0_score}\nTeam 1 & 3 score: {team_1_score}"
             msg += "\n\nFinal Player Scores:\n" + team_lines
-            
+
             messagebox.showinfo("Game Over", msg)
             #Performance Tracking 
             self.tracker.update_tracker_team_mode(winner, True, team_0_score, team_1_score)
