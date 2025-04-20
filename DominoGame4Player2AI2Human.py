@@ -2,6 +2,7 @@ import random
 from collections import deque
 import tkinter as tk
 from tkinter import messagebox
+from PerformanceMeasure import PerformanceTracker #importing the performance tracker
 import copy
 import pygame
 import sys
@@ -31,7 +32,7 @@ class DominoGame:
         self.board = deque()
         self.board_owners = deque()  # To track who placed each tile
         self.current_player = 0
-        self.passes = 0
+        self.passes = 0        
         # Find the (6,6) to start the game
         for i, hand in enumerate(self.players):
             if (6, 6) in hand:
@@ -130,9 +131,10 @@ class DominoGame:
 # -------------- GUI --------------
 
 class DominoGUI:
-    def __init__(self, root, team_mode, layout):
+    def __init__(self, root, team_mode, layout, tracker):
         self.root = root
         self.root.title("Domino - 2 Players vs 2 AI (Pass-and-Play)")
+        self.tracker = PerformanceTracker() #tracker added
         # initialize game logic with both flags
         self.game = DominoGame(team_mode, layout)
 
@@ -494,6 +496,31 @@ class DominoGUI:
         self.ai_labels[0].config(text=f"AI 1 has {len(self.game.players[1])} tiles")
         self.ai_labels[1].config(text=f"AI 2 has {len(self.game.players[3])} tiles")
 
+    '''
+    Starts a new game.
+    '''
+    def start_new_game(self,teamMode, layout):
+        self.game = DominoGame(teamMode, layout)
+        self.game_over = False
+        self.last_human = None
+
+        # Clear canvas (but keep the widget)
+        self.board_canvas.delete("all")
+
+        # Clear player hand
+        for widget in self.hand_frame.winfo_children():
+            widget.destroy()
+
+        self.draw_board()
+        self.draw_hand()
+        self.update_ai_tile_counts()
+
+        if self.game.current_player in [1, 3]:
+            self.status_label.config(text=f"AI {1 if self.game.current_player == 1 else 2} starts with (6|6)!")
+            self.root.after(1000, self.ai_turn)
+        else:
+            self.status_label.config(text=f"You start with (6|6)!")
+
     def end_game(self):
         '''
         Print out all winners and scores for the game played.
@@ -501,6 +528,7 @@ class DominoGUI:
         '''
         winner = self.game.get_winner()
         # Optional: Print all players' remaining points
+        
         player_scores = [
             (i, sum(t[0] + t[1] for t in hand), hand)
             for i, hand in enumerate(self.game.players)
@@ -517,10 +545,15 @@ class DominoGUI:
             msg = "🤝 It's a tie!" if winner == -1 else f"🎉 {winner} wins!"
             msg += f"\n\nTeam 0 & 2 score: {team_0_score}\nTeam 1 & 3 score: {team_1_score}"
             msg += "\n\nFinal Player Scores:\n" + team_lines
+            
+            messagebox.showinfo("Game Over", msg)
+            #Performance Tracking 
+            self.tracker.update_tracker_team_mode(winner, True, team_0_score, team_1_score)
+            self.tracker.report()
         else:
             # Free-for-all scoring
             score_lines = "\n".join(
-                f"Player {i} ({'You' if i in [0, 1, 2] else 'AI'}): {score} points | Tiles: {hand}"
+                f"Player {i} ({'You' if i in [0, 2] else 'AI'}): {score} points | Tiles: {hand}"
                 for i, score, hand in player_scores
             )
 
@@ -531,8 +564,22 @@ class DominoGUI:
             else:
                 msg = f"🤖 AI {1 if winner == 1 else 2} wins!"
             msg += "\nFinal Scores:\n" + score_lines
-        messagebox.showinfo("Game Over", msg)
-        self.root.quit()
+            messagebox.showinfo("Game Over", msg)
+
+            tracker_scores = [score for i, score, hand in player_scores]
+            #Performance Tracking 
+            self.tracker.update_tracker_4_player(winner, tracker_scores[0], tracker_scores[1], tracker_scores[2], tracker_scores[3], "2v2")
+            self.tracker.report()
+
+        #Play again option
+        play_again = messagebox.askyesno(
+            title="Play again?",
+            message="Would you like to play again?"
+        )
+        if play_again:
+            self.start_new_game(team_mode,layout)
+        else:
+            self.root.quit()
 
 # -------------- Run the App --------------
 
@@ -561,8 +608,9 @@ if __name__ == "__main__":
     pygame.mixer.music.load("BGM.mp3")
     pygame.mixer.music.play(-1)
 
+    tracker = PerformanceTracker() #tracker added   
     root = tk.Tk()
     # pass both flags into your GUI
-    app = DominoGUI(root, team_mode, layout)
+    app = DominoGUI(root, team_mode, layout, tracker)
     root.mainloop()
     sys.exit()

@@ -506,7 +506,7 @@ class DominoGUI:
         messagebox.showinfo("Game Over", msg)
 
         #Performance Tracking 
-        self.tracker.update_tracker(winner, human_score, ai_score, False, 0, 0)
+        self.tracker.update_tracker_2_player(winner, human_score, ai_score, "1v1")
         self.tracker.report()
 
         #Play again option

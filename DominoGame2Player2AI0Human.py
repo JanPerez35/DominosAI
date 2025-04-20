@@ -2,6 +2,7 @@ import random
 from collections import deque
 import tkinter as tk
 from tkinter import messagebox
+from PerformanceMeasure import PerformanceTracker #importing the performance tracker
 import copy
 import pygame
 
@@ -28,22 +29,26 @@ class DominoGame:
         # Checks who passed
         self.passes = 0
         #find highest double in players' hands
-        highest_double = None
+        self.highest_double = None
         self.ai_should_start = False  # Flag to trigger AI move at start
+        # Index of the player who starts the game
+        self.starting_player = 0
 
         for n in range(6, -1, -1):
             if (n, n) in self.players[0]:
-                highest_double = (n, n)
+                self.highest_double = (n, n)
                 self.players[0].remove((n, n))
                 self.board.append(((n, n), 0))
                 self.current_player = 1  # AI goes next
                 self.ai_should_start = True
+                self.starting_player = 0
                 break
             elif (n, n) in self.players[1]:
-                highest_double = (n, n)
+                self.highest_double = (n, n)
                 self.players[1].remove((n, n))
                 self.board.append(((n, n), 1))
                 self.current_player = 0
+                self.starting_player = 1
                 break
 
 
@@ -142,8 +147,9 @@ Class that handles the GUI and interacts with the game logic for user and AI int
 
 
 class DominoGUI:
-    def __init__(self, root):
+    def __init__(self, root, tracker):
         self.root = root
+        self.tracker = PerformanceTracker() #tracker added
         self.root.title("Domino - AI vs AI (Monte Carlo)")
         self.game = DominoGame()
 
@@ -305,6 +311,35 @@ class DominoGUI:
 
     def update_ai_tile_count(self):
         self.ai_tiles_label.config(text=f"AI {self.game.current_player} has {len(self.game.players[1])} tiles")
+     
+    '''
+    Starts a new game.
+    '''   
+
+    def start_new_game(self):
+        # Start a new game instance
+        self.game = DominoGame()
+
+        # Reset the board display
+        for widget in self.board_frame.winfo_children():
+            widget.destroy()
+
+        # Redraw the board
+        self.draw_board()
+
+        # Update the AI tile count display
+        self.update_ai_tile_count()
+
+        # Set the status label based on who starts
+        if self.game.current_player != 0:
+            self.status_label.config(text=f"AI {self.game.current_player} starts with (6|6)!")
+        else:
+            self.status_label.config(text=f"AI {self.game.current_player} starts with (6|6)!")
+
+        # Check if the first AI move is required and schedule it
+        #if self.game.current_player == 0:
+            # Delay to allow the game to update before the first move
+        self.root.after(1000, self.ai_turn)
 
     '''
     Ends the game and displays the winner.
@@ -325,6 +360,9 @@ class DominoGUI:
         print("Final scores (lower is better):")
         for i, score, hand in player_scores:
             print(f"AI {i}: {score} points")
+            if i == 0:
+                ai1_score = score
+            else: ai2_score = score
 
         if winner == 0:
             msg = f"🎉 AI {winner} wins!"
@@ -336,7 +374,20 @@ class DominoGUI:
         msg += "\nFinal Scores:\n" + score_lines
 
         messagebox.showinfo("Game Over", msg)
-        self.root.quit()
+
+        #Performance Tracking 
+        self.tracker.update_tracker_2_player(winner, ai1_score, ai2_score, "2 AI")
+        self.tracker.report()
+
+        #Play again option
+        play_again = messagebox.askyesno(
+            title="Play again?",
+            message="Would you like to play again?"
+        )
+        if play_again:
+            self.start_new_game()
+        else:
+            self.root.quit()
 
 
 # ------------ Run the App ------------
@@ -347,6 +398,7 @@ if __name__ == "__main__":
     pygame.mixer.music.load("BGM.mp3")
     pygame.mixer.music.play(-1)
 
+    tracker = PerformanceTracker() #tracker added
     root = tk.Tk()
-    app = DominoGUI(root)
+    app = DominoGUI(root, tracker) #tracker added
     root.mainloop()
