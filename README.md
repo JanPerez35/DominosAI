@@ -14,5 +14,6 @@
 9. Wait for your turn to play again, any piece that you press before your turn will prompt a **warning**.
 10. If you do not have any playable pieces within your turn press either the **Pass Turn** button or Draw another piece by pressing the **Draw tile** button located below.
 11. You may scroll manually by using the bar above the game or by processing the left or right scroll buttons.
-12. When the game ends you may close the game over message and select another game mode.
-13. Close the menu screen by pressing the **X** in the top right corner to quit.
+12. When the game ends the terminal inside the program will display the performance.
+13. Close the game over message and select another game mode or click ok on the play again pop up window.
+14. If you want to close the menu screen press the **X** in the top right corner to quit.

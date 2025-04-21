@@ -117,6 +117,15 @@ class DominoGame:
 
 
     def draw_from_stock(self, player):
+        """
+        Draw a tile from the stock for a player if available.
+
+        Args:
+            player (int): Index of the player drawing (0 or 1).
+
+        Returns:
+            Optional[Tuple[int, int]]: The drawn tile, or None if stock is empty.
+         """
         if self.stock:
             drawn_tile = self.stock.pop()
             self.players[player].append(drawn_tile)
