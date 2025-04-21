@@ -8,7 +8,7 @@ import pygame
 import sys
 
 """
-Domino game utilizing Monter Carlo AI opponent
+Domino game utilizing Monte Carlo AI opponent
 
 This class defines the DominoGame logic and a corresponding GUI class
 called DominoGUI to play a dominoes game between a human and an AI. This

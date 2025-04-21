@@ -2,12 +2,12 @@ import random
 from collections import deque
 import tkinter as tk
 from tkinter import messagebox
-from PerformanceMeasure import PerformanceTracker #importing the performance tracker
+from PerformanceMeasure import PerformanceTracker
 import copy
 import pygame
 
 """
-Domino game utilizing Monter Carlo AI opponent
+Domino game utilizing Monte Carlo AI opponent.
 
 This class defines the DominoGame logic and a corresponding GUI class
 called DominoGUI to play a dominoes game between a human and an AI. This
@@ -57,7 +57,7 @@ class DominoGame:
         self.current_player = 0
         # Checks who passed
         self.passes = 0
-        #finds highest double in players' hands
+        # Finds the highest double in players' hands
         self.highest_double = None
         # Flag to trigger AI move at start
         self.ai_should_start = False
@@ -459,21 +459,27 @@ class DominoGUI:
         """
         self.ai_tiles_label.config(text=f"AI has {len(self.game.players[1])} tiles")
 
-    '''
-    Starts a new game.
-    '''
+
     def start_new_game(self):
+        """
+         Initiates a new instance of a domino game.
+        """
         self.game = DominoGame()
-        
+
+        # Resets the board and hand displays
         for widget in self.board_frame.winfo_children():
             widget.destroy()
         for widget in self.hand_frame.winfo_children():
             widget.destroy()
 
+        # Redraws the board and hand on screen
         self.draw_board()
         self.draw_hand()
+
+        # Update the AI tile count display
         self.update_ai_tile_count()
 
+        # Set the status label based on who starts
         if self.game.starting_player != 0:
             self.status_label.config(text=f"AI starts with {self.game.highest_double}!")
             
@@ -497,6 +503,7 @@ class DominoGUI:
                 human_score = score
             else: ai_score = score
         if winner == 0:
+            #emoji code
             msg = "\uD83C\uDF89 You win!"
         elif winner == -1:
             msg = "\uD83E\uDD1D It's a tie!"
