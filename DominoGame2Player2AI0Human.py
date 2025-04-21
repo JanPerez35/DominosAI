@@ -117,21 +117,11 @@ class DominoGame:
 
 
     def draw_from_stock(self, player):
-        """
-        Allows the player to draw tiles from the stock if necessary and available.
-
-        Args:
-           player (int): Index of the player drawing (0 or 1).
-
-        Returns:
-           Optional[Tuple[int, int]]: The drawn tile, or None if stock is empty.
-        """
         if self.stock:
             drawn_tile = self.stock.pop()
             self.players[player].append(drawn_tile)
             return drawn_tile
         return None
-
 
 
     def play_tile(self, player, tile):
@@ -163,14 +153,12 @@ class DominoGame:
         self.passes = 0
 
 
-
     def pass_turn(self):
         """
         A counter that verifies if the current player has passed their turn.
         If so, the counter is incremented.
         """
         self.passes += 1
-
 
 
     def is_game_over(self):
@@ -182,7 +170,6 @@ class DominoGame:
             bool: True if the game is over, False otherwise.
         """
         return any(len(p) == 0 for p in self.players) or self.passes >= 2
-
 
 
     def get_winner(self):
@@ -416,7 +403,7 @@ class DominoGUI:
         Refresh label showing how many tiles AI holds.
         """
         self.ai_tiles_label.config(text=f"AI {self.game.current_player} has {len(self.game.players[1])} tiles")
-     
+
 
     def start_new_game(self):
         """
@@ -439,7 +426,6 @@ class DominoGUI:
             self.status_label.config(text=f"AI {self.game.current_player} starts with (6|6)!")
         else:
             self.status_label.config(text=f"AI {self.game.current_player} starts with (6|6)!")
-
 
         # Delay to allow the game to update before the first move
         self.root.after(1000, self.ai_turn)

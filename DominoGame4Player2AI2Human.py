@@ -2,7 +2,8 @@ import random
 from collections import deque
 import tkinter as tk
 from tkinter import messagebox
-from PerformanceMeasure import PerformanceTracker #importing the performance tracker
+#importing the performance tracker
+from PerformanceMeasure import PerformanceTracker
 import copy
 import pygame
 import sys
@@ -16,9 +17,9 @@ class DominoGame:
         self.team_mode = team_mode
         self.layout = layout
 
-        # define teams based on layout choice
+        # Defines teams based on layout choice
         if layout == "ai_pairs":
-            # human 0 + AI 1 vs human 2 + AI 3
+            # human 0 + Ai 1 vs human 2 + AI 3
             self.teams = [[0, 1], [2, 3]]
         else:
             # both humans (0,2) vs both AIs (1,3)
@@ -515,7 +516,7 @@ class DominoGUI:
         self.draw_hand()
         self.update_ai_tile_counts()
 
-        if self.game.current_player in [1, 3]:
+        if self.game.current_player in [0, 2]:
             self.status_label.config(text=f"AI {1 if self.game.current_player == 1 else 2} starts with (6|6)!")
             self.root.after(1000, self.ai_turn)
         else:
@@ -545,7 +546,7 @@ class DominoGUI:
             msg = "🤝 It's a tie!" if winner == -1 else f"🎉 {winner} wins!"
             msg += f"\n\nTeam 0 & 2 score: {team_0_score}\nTeam 1 & 3 score: {team_1_score}"
             msg += "\n\nFinal Player Scores:\n" + team_lines
-            
+
             messagebox.showinfo("Game Over", msg)
             #Performance Tracking 
             self.tracker.update_tracker_team_mode(winner, True, team_0_score, team_1_score)
