@@ -1,6 +1,46 @@
 
 class PerformanceTracker:
+    """
+    Tracks and reports performance statistics for various game modes in a domino game.
+
+    This class maintains statistics such as the number of games played, win counts,
+    tie counts, and average scores for individual players or teams across multiple game
+    modes. The report method prints a formatted performance summary based on the
+    current mode.
+
+    Supported Game Modes:
+        - "1v1": One human vs one AI.
+        - "2v2": Two humans vs two AIs. Human and AI positions may vary across games.
+        - "3v1": Three humans vs one AI.
+        - "1v3": One human vs three AIs.
+        - Other (not listed in the report but handled internally):
+            * "AI vs AI": Two AIs playing against each other.
+            * "4 AI": All four players are AIs competing against each other.
+
+    Attributes:
+        games_played (int): Total number of games tracked.
+        TeamMode (bool): Whether the current game is using team-based scoring.
+        player1_wins (int): Wins for player 1.
+        player2_wins (int): Wins for player 2.
+        player3_wins (int): Wins for player 3.
+        player4_wins (int): Wins for player 4.
+        team1_wins (int): Wins for team 1 (players 0 & 2).
+        team2_wins (int): Wins for team 2 (players 1 & 3).
+        ties (int): Number of tied games.
+        player1_scores (list[int]): Score history for player 1.
+        player2_scores (list[int]): Score history for player 2.
+        player3_scores (list[int]): Score history for player 3.
+        player4_scores (list[int]): Score history for player 4.
+        team1_scores (list[int]): Score history for team 1.
+        team2_scores (list[int]): Score history for team 2.
+        four_players (bool): Whether the game involves four players.
+        game_mode (str | None): Current game mode identifier.
+    """
+
     def __init__(self):
+        """
+        Initializes the PerformanceTracker with default values for all statistics.
+        """
         self.games_played = 0
         self.TeamMode = False
         self.player1_wins = 0
@@ -20,6 +60,15 @@ class PerformanceTracker:
         self.game_mode = None     
 
     def update_tracker_2_player(self, winner, player1_score, player2_score, game_mode):
+        """
+        Updates the tracker for a 2-player (1v1) game.
+
+        Args:
+            winner (int): The index of the winning player (0 for player 1, 1 for player 2, -1 for tie).
+            player1_score (int): Final score for player 1.
+            player2_score (int): Final score for player 2.
+            game_mode (str): The current game mode
+        """
         self.games_played += 1
         self.game_mode = game_mode
 
@@ -35,6 +84,15 @@ class PerformanceTracker:
         self.player2_scores.append(player2_score)
 
     def update_tracker_team_mode(self, winner, TeamMode, Team1_score, Team2_score):
+        """
+        Updates the tracker for a team-based game.
+
+        Args:
+            winner (str | int): The winning team ("Team 1", "Team 2", or -1 for a tie).
+            TeamMode (bool): True if the game is in team mode.
+            Team1_score (int): Final score for team 1.
+            Team2_score (int): Final score for team 2.
+        """
         self.TeamMode = TeamMode        
 
         if self.TeamMode:
@@ -51,6 +109,18 @@ class PerformanceTracker:
             self.team2_scores.append(Team2_score)
 
     def update_tracker_4_player(self, winner, player1_score, player2_score, player3_score, player4_score, game_mode):
+        """
+        Updates the tracker for a 4-player game (2v2, 3v1, or 1v3).
+
+        Args:
+            winner (int): Index of the winning player (0–3) or -1 for tie.
+            player1_score (int): Score for player 1.
+            player2_score (int): Score for player 2.
+            player3_score (int): Score for player 3.
+            player4_score (int): Score for player 4.
+            game_mode (str): The current game mode
+        """
+
         self.games_played += 1
         self.four_players = True
         self.game_mode = game_mode
@@ -71,9 +141,21 @@ class PerformanceTracker:
         self.player2_scores.append(player2_score)
         self.player3_scores.append(player3_score)
         self.player4_scores.append(player4_score)
-
-    #Prints the performance measures
+    
     def report(self):
+        """
+        Prints a performance summary based on the current game mode.
+
+        Includes stats like win counts, win percentages, average scores,
+        and ties. Adapts to team mode or free-for-all formats.
+
+        Game modes:
+            - 1v1: 1 Human vs 1 AI
+            - 2v2: 2 Humans vs 2 AIs (team configuration varies)
+            - 3v1: 3 Humans vs 1 AI
+            - 1v3: 1 Human vs 3 AIs
+            - Others (not listed): 2 AIs vs each other, or 4 AIs free-for-all
+        """
         if self.TeamMode:
             print("\n--- Performance Report ---")
             print(f"Games Played: {self.games_played}")
