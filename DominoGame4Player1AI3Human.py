@@ -257,7 +257,11 @@ class DominoGUI:
 
         # Color mapping
         if team_mode:
-            self.player_colors = ['blue', 'red', 'blue', 'red']
+            self.player_colors = ['black'] * 4
+            for idx, team in enumerate(self.game.teams):
+                color = 'blue' if idx == 0 else 'red'
+                for p in team:
+                    self.player_colors[p] = color
         else:
             self.player_colors = ['blue', 'red', 'green', 'purple']
 

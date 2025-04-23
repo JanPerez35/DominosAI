@@ -14,7 +14,6 @@ game_modes = {
     "All 4 Players AI (Spectate)": "DominoGame4Player4AI0Human.py"
 }
 
-
 def launch_game(path, team_mode, layout=None):
     """Launches the given script, passing --team and optionally --layout for Teams"""
     if not os.path.exists(path):
