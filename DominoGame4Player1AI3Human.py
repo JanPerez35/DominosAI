@@ -581,7 +581,7 @@ class DominoGUI:
         self.game.current_player = (self.game.current_player + 1) % 4
         self.root.after(1000, self.after_move)
 
-    def monte_carlo_ai_move(self, player_index, simulations=25):
+    def monte_carlo_ai_move(self, player_index, simulations=30):
         """
         Uses Monte Carlo simulation to determine the best move for the AI.
 

@@ -427,7 +427,7 @@ class DominoGUI:
         else:
             self.root.after(500, self.ai_turn)
 
-    def monte_carlo_ai_move(self, player_index, simulations=25):
+    def monte_carlo_ai_move(self, player_index, simulations=30):
         """
            Evaluate possible moves via Monte Carlo playouts and return best one.
            Currently, it runs 30 simulations per move.
